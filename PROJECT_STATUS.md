@@ -15,3 +15,5 @@ Added bounded JPEG preview (Android 9+) and first-page PDF preview with page cou
 Added symmetric media-col margins (0/3/5/10 mm) and print-scaling fit/fill/none, default omitted. Backward-compatible method overload avoids transient compile mismatch. Device may reject unsupported settings; preview remains content-only. Build and hardware validation pending.
 
 Added PDF single page or contiguous page range via IPP page-ranges. Requires printer support; bounds against actual PDF page count and preview navigation pending. Build and hardware tests pending.
+
+PDF preview now navigates pages and starts at selected range; actual page count checked before submitting job. Build/device tests pending. Next prioritize real print compatibility and maintenance before editor expansion.
