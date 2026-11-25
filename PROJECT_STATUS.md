@@ -13,3 +13,5 @@ F4 now encoded using IPP media-col with 21000 x 33000 hundredths mm. Added optio
 Added bounded JPEG preview (Android 9+) and first-page PDF preview with page count. Preview is content-only, not exact print layout; all PDF pages still sent. Build and hardware validation pending.
 
 Added symmetric media-col margins (0/3/5/10 mm) and print-scaling fit/fill/none, default omitted. Backward-compatible method overload avoids transient compile mismatch. Device may reject unsupported settings; preview remains content-only. Build and hardware validation pending.
+
+Added PDF single page or contiguous page range via IPP page-ranges. Requires printer support; bounds against actual PDF page count and preview navigation pending. Build and hardware tests pending.
