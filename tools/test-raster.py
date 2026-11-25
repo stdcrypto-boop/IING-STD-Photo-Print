@@ -22,6 +22,14 @@ static void check(int[] row,boolean gray)throws Exception{
  if(in.read()!=-1)throw new AssertionError("trailing data");
 }
 public static void main(String[] args)throws Exception{
+ for(boolean gray:new boolean[]{false,true})for(int dpi:new int[]{150,200,300})for(int[] paper:new int[][]{{21000,29700},{21000,33000},{21590,35560},{10160,15240}}){
+ int w=(int)Math.round(paper[0]*dpi/2540.0),h=(int)Math.round(paper[1]*dpi/2540.0);
+ byte[] bytes=rasterHeader(w,h,dpi,paper[0],paper[1],gray,3);
+ if(bytes.length!=1796||!new String(bytes,0,9,java.nio.charset.StandardCharsets.US_ASCII).equals("PwgRaster"))throw new AssertionError("header signature");
+ java.nio.ByteBuffer bb=java.nio.ByteBuffer.wrap(bytes);
+ int[][] fields={{276,dpi},{280,dpi},{372,w},{376,h},{384,8},{388,gray?8:24},{392,w*(gray?1:3)},{396,0},{400,gray?18:19},{420,gray?1:3},{452,3},{456,1},{460,1},{472,w},{476,h}};
+ for(int[] field:fields)if(bb.getInt(field[0])!=field[1])throw new AssertionError("header field "+field[0]);
+ }
  Random random=new Random(42);
  for(boolean gray:new boolean[]{false,true})for(int n:new int[]{1,2,127,128,129,255,256,257,2480}){
  int[] row=new int[n];check(row,gray);
