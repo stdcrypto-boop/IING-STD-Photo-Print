@@ -16,6 +16,11 @@ final class Ipp {
  out.writeByte(count==1?0:257-count);for(int j=0;j<count;j++)writeRasterPixel(out,rasterPixel(row[x+j],gray),gray);x+=count;
  }
  }
+ static byte[] rasterHeader(int w,int h,int dpi,int mmw,int mmh,boolean gray,int pages){
+ int channels=gray?1:3;
+ java.nio.ByteBuffer header=java.nio.ByteBuffer.allocate(1796);header.put("PwgRaster".getBytes(java.nio.charset.StandardCharsets.US_ASCII));header.putInt(276,dpi);header.putInt(280,dpi);header.putInt(340,1);header.putInt(352,(int)Math.round(mmw*72.0/2540));header.putInt(356,(int)Math.round(mmh*72.0/2540));header.putInt(372,w);header.putInt(376,h);header.putInt(384,8);header.putInt(388,8*channels);header.putInt(392,w*channels);header.putInt(400,gray?18:19);header.putInt(420,channels);header.putInt(452,pages);header.putInt(456,1);header.putInt(460,1);header.putInt(464,0);header.putInt(468,0);header.putInt(472,w);header.putInt(476,h);
+ return header.array();
+ }
  static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color)throws Exception{
  String types=capability(report,"pwg-raster-document-type-supported");
  boolean gray="monochrome".equals(color);int channels=gray?1:3;
@@ -30,7 +35,7 @@ final class Ipp {
  int begin=first>0?first-1:0,end=last>0?last:renderer.getPageCount();if(begin>=end||end>renderer.getPageCount())throw new IOException("Rentang PDF tidak valid");
  out.writeBytes("RaS2");
  for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
- java.nio.ByteBuffer header=java.nio.ByteBuffer.allocate(1796);header.put("PwgRaster".getBytes(StandardCharsets.US_ASCII));header.putInt(276,dpi);header.putInt(280,dpi);header.putInt(340,1);header.putInt(352,(int)Math.round(mmw*72.0/2540));header.putInt(356,(int)Math.round(mmh*72.0/2540));header.putInt(372,w);header.putInt(376,h);header.putInt(384,8);header.putInt(388,8*channels);header.putInt(392,w*channels);header.putInt(400,gray?18:19);header.putInt(420,channels);header.putInt(452,end-begin);header.putInt(456,1);header.putInt(460,1);header.putInt(464,0);header.putInt(468,0);header.putInt(472,w);header.putInt(476,h);out.write(header.array());
+ out.write(rasterHeader(w,h,dpi,mmw,mmh,gray,end-begin));
  android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(w,h,android.graphics.Bitmap.Config.ARGB_8888);
  try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=Math.min((float)w/page.getWidth(),(float)h/page.getHeight());android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);writeRasterRow(out,row,gray);}}finally{bitmap.recycle();}
  }}
