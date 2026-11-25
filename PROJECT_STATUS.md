@@ -9,3 +9,5 @@ Added IPP attribute parsing and scrollable capability report (formats, named med
 Direct Print-Job implemented for native PDF/JPEG with strict attribute fidelity, A4/F4/Legal/4R selection and confirmation. F4 uses custom keyword only; media-col and raster fallback still pending. Printer may reject unsupported formats/media or chunked HTTP. No physical validation yet. Custom launcher icon registered.
 
 F4 now encoded using IPP media-col with 21000 x 33000 hundredths mm. Added optional quality, color, media type and copies. Fixed fidelity attribute name length. Strict fidelity remains; actual device support and build pending. Next: preview, raster fallback, supported-option filtering and maintenance investigation.
+
+Added bounded JPEG preview (Android 9+) and first-page PDF preview with page count. Preview is content-only, not exact print layout; all PDF pages still sent. Build and hardware validation pending.
