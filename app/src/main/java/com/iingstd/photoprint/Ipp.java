@@ -20,12 +20,20 @@ final class Ipp {
  StringBuilder b=new StringBuilder();for(java.util.Map.Entry<String,java.util.List<String>> e:values.entrySet())b.append(e.getKey()).append(": ").append(android.text.TextUtils.join(", ",e.getValue())).append("\n");
  return b.length()==0?"Tidak ada atribut yang dapat ditampilkan.":b.toString();
  }
- static String print(String uri,String mime,InputStream document,String media)throws Exception{
+ static void integer(DataOutputStream d,int tag,String name,int value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(4);d.writeInt(value);}
+ static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{
  URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Alamat IPP tidak valid");
  URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL();
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
- d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort(22);d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
- d.writeByte(2);attr(d,0x44,"media",media);d.writeByte(3);
+ d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort("ipp-attribute-fidelity".length());d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
+ d.writeByte(2);
+ if(media.equals("custom_f4_210x330mm")){
+ attr(d,0x34,"media-col","");attr(d,0x4a,"","media-size");attr(d,0x34,"","");
+ attr(d,0x4a,"","x-dimension");integer(d,0x21,"",21000);
+ attr(d,0x4a,"","y-dimension");integer(d,0x21,"",33000);
+ attr(d,0x37,"","");if(!type.isEmpty()){attr(d,0x4a,"","media-type");attr(d,0x44,"",type);}attr(d,0x37,"","");
+ }else{attr(d,0x44,"media",media);if(!type.isEmpty())attr(d,0x44,"media-type",type);}
+ if(quality!=0)integer(d,0x23,"print-quality",quality);if(!color.isEmpty())attr(d,0x44,"print-color-mode",color);if(copies>1)integer(d,0x21,"copies",copies);d.writeByte(3);
  HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(60000);c.setRequestMethod("POST");c.setDoOutput(true);c.setChunkedStreamingMode(16384);c.setRequestProperty("Content-Type","application/ipp");
  try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());byte[] buf=new byte[16384];int n;while((n=document.read(buf))!=-1)out.write(buf,0,n);}
  if(c.getResponseCode()!=200)throw new IOException("HTTP "+c.getResponseCode());
