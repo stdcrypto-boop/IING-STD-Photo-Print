@@ -41,3 +41,5 @@ Added shared bitmap rotation and center crop ratios for preview and actual JPEG 
 Added single passport photo PDF layout (20x30, 30x40, 40x60 mm) top-left, minimum 5 mm inset, forced no scaling. Requires printer native PDF and no-scaling support; raster fallback intentionally rejects none. Preview shows crop only, not full sheet. Physical dimensions and CI pending verification; next sheet preview and repeat layout.
 
 Added repeated same-photo layout 1–20 copies per sheet, configurable gap 0/2/3/5/10 mm, shared physical cell geometry for PDF and sheet preview, overflow rejection and scrollable editor. Invalid layout clears preview and print reports maximum. Native PDF/no scaling still required; CI and physical size verification pending. Multi-image collage not yet implemented.
+
+Added live sheet layout summary and visible overflow error; print confirmation now validates layout before dismissal and retains editor on invalid count. Recycles temporary edited bitmap on invalid layout. CI status not available through PR-only workflow lookup; physical test pending.
