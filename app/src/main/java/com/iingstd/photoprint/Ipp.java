@@ -20,4 +20,17 @@ final class Ipp {
  StringBuilder b=new StringBuilder();for(java.util.Map.Entry<String,java.util.List<String>> e:values.entrySet())b.append(e.getKey()).append(": ").append(android.text.TextUtils.join(", ",e.getValue())).append("\n");
  return b.length()==0?"Tidak ada atribut yang dapat ditampilkan.":b.toString();
  }
+ static String print(String uri,String mime,InputStream document,String media)throws Exception{
+ URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Alamat IPP tidak valid");
+ URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL();
+ ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
+ d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort(22);d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
+ d.writeByte(2);attr(d,0x44,"media",media);d.writeByte(3);
+ HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(60000);c.setRequestMethod("POST");c.setDoOutput(true);c.setChunkedStreamingMode(16384);c.setRequestProperty("Content-Type","application/ipp");
+ try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());byte[] buf=new byte[16384];int n;while((n=document.read(buf))!=-1)out.write(buf,0,n);}
+ if(c.getResponseCode()!=200)throw new IOException("HTTP "+c.getResponseCode());
+ try(DataInputStream in=new DataInputStream(c.getInputStream())){in.readUnsignedShort();int status=in.readUnsignedShort();if(in.readInt()!=2)throw new IOException("Request ID salah");if(status!=0)throw new IOException("IPP status "+Integer.toHexString(status)+"; periksa printer sebelum mencoba lagi");return "Job diterima printer. Periksa hasil fisik.";}
+ }finally{c.disconnect();}
+ }
+
 }
