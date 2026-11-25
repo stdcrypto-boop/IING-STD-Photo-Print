@@ -2,6 +2,26 @@ package com.iingstd.photoprint;
 import java.io.*;import java.net.*;import java.nio.charset.StandardCharsets;
 final class Ipp {
  static java.io.File cacheDirectory;
+ static String capability(String report,String key){for(String line:report.split("\\n"))if(line.startsWith(key+": "))return line.substring(key.length()+2);return "";}
+ static void rasterPdf(InputStream input,File target,String report,String media,int first,int last)throws Exception{
+ String types=capability(report,"pwg-raster-document-type-supported");
+ if(!java.util.Arrays.asList(types.split(", ")).contains("srgb_8"))throw new IOException("PWG Raster sRGB 8-bit tidak didukung");
+ String resolutions=capability(report,"pwg-raster-document-resolution-supported");
+ if(!java.util.Arrays.asList(resolutions.split(", ")).contains("300x300 dpi"))throw new IOException("PWG Raster 300 dpi tidak didukung");
+ int mmw=21000,mmh=29700;if(media.equals("custom_f4_210x330mm"))mmh=33000;else if(media.equals("na_legal_8.5x14in")){mmw=21590;mmh=35560;}else if(media.equals("na_index-4x6_4x6in")){mmw=10160;mmh=15240;}
+ int w=(int)Math.round(mmw*300.0/2540),h=(int)Math.round(mmh*300.0/2540);
+ File source=File.createTempFile("raster-source-",".pdf",cacheDirectory);
+ try{try(OutputStream out=new FileOutputStream(source)){byte[] b=new byte[65536];int n;while((n=input.read(b))!=-1)out.write(b,0,n);}
+ try(android.graphics.pdf.PdfRenderer renderer=new android.graphics.pdf.PdfRenderer(android.os.ParcelFileDescriptor.open(source,android.os.ParcelFileDescriptor.MODE_READ_ONLY));DataOutputStream out=new DataOutputStream(new BufferedOutputStream(new FileOutputStream(target)))){
+ int begin=first>0?first-1:0,end=last>0?last:renderer.getPageCount();if(begin>=end||end>renderer.getPageCount())throw new IOException("Rentang PDF tidak valid");
+ out.writeBytes("RaS2");
+ for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
+ java.nio.ByteBuffer header=java.nio.ByteBuffer.allocate(1796);header.put("PwgRaster".getBytes(StandardCharsets.US_ASCII));header.putInt(276,300);header.putInt(280,300);header.putInt(340,1);header.putInt(352,(int)Math.round(mmw*72.0/2540));header.putInt(356,(int)Math.round(mmh*72.0/2540));header.putInt(372,w);header.putInt(376,h);header.putInt(384,8);header.putInt(388,24);header.putInt(392,w*3);header.putInt(400,19);header.putInt(420,3);header.putInt(452,end-begin);header.putInt(456,1);header.putInt(460,1);header.putInt(464,0);header.putInt(468,0);header.putInt(472,w);header.putInt(476,h);out.write(header.array());
+ android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(w,h,android.graphics.Bitmap.Config.ARGB_8888);
+ try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=Math.min((float)w/page.getWidth(),(float)h/page.getHeight());android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);out.writeByte(0);for(int x=0;x<w;){int count=Math.min(128,w-x);if(count==1){out.writeByte(0);}else{out.writeByte(257-count);}for(int j=0;j<count;j++){int pixel=row[x+j];out.writeByte(pixel>>16);out.writeByte(pixel>>8);out.writeByte(pixel);}x+=count;}}}finally{bitmap.recycle();}
+ }}
+ }}finally{source.delete();}
+ }
  static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling)throws IOException{
  java.io.File source=java.io.File.createTempFile("photo-source-",".jpg",cacheDirectory);
  android.graphics.Bitmap bitmap;
@@ -44,6 +64,9 @@ final class Ipp {
  if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("application/pdf")&&!"none".equals(scaling)&&cacheDirectory!=null){
  java.io.File temp=java.io.File.createTempFile("photo-print-",".pdf",cacheDirectory);
  try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return print(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
+ }
+ if("application/pdf".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("image/pwg-raster")&&cacheDirectory!=null&&margin<0&&(scaling.isEmpty()||"fit".equals(scaling))&&!"monochrome".equals(color)){
+ File temp=File.createTempFile("pwg-print-",".ras",cacheDirectory);try{rasterPdf(document,temp,capabilities,media,first,last);try(InputStream raster=new FileInputStream(temp)){return print(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"",0,0)+" (PDF ke PWG Raster)";}}finally{temp.delete();}
  }
  throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
  }
