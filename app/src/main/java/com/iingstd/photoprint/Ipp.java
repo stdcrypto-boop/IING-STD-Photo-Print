@@ -25,9 +25,11 @@ final class Ipp {
  int nl=in.readUnsignedShort();byte[] nb=new byte[nl];in.readFully(nb);if(nl>0)name=new String(nb,StandardCharsets.UTF_8);
  int vl=in.readUnsignedShort();byte[] v=new byte[vl];in.readFully(v);
  if(tag==0x34){depth++;continue;}if(tag==0x37){depth=Math.max(0,depth-1);continue;}if(depth>0)continue;
- if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","printer-state","printer-state-reasons","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported").contains(name))continue;
+ if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","printer-state","printer-state-reasons","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported","pwg-raster-document-type-supported","pwg-raster-document-resolution-supported","printer-resolution-supported","printer-resolution-default").contains(name))continue;
  String val;
  if((tag==0x21||tag==0x23)&&vl==4){int n=java.nio.ByteBuffer.wrap(v).getInt();val=name.equals("print-quality-supported")?(n==3?"Draft":n==4?"Normal":n==5?"High":String.valueOf(n)):String.valueOf(n);}
+ else if(tag==0x32&&vl==9){java.nio.ByteBuffer resolution=java.nio.ByteBuffer.wrap(v);int x=resolution.getInt(),y=resolution.getInt(),unit=resolution.get()&255;val=x+"x"+y+(unit==3?" dpi":unit==4?" dpcm":" (unknown unit)");}
+ else if(tag==0x22&&vl==1)val=v[0]==0?"false":"true";
  else if(tag>=0x40&&tag<=0x4f)val=new String(v,StandardCharsets.UTF_8);else continue;
  values.computeIfAbsent(name,k->new java.util.ArrayList<>()).add(val);
  }
