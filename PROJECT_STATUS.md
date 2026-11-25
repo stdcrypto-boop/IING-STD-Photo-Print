@@ -33,3 +33,5 @@ User reported green for grayscale/resolution stage. Added repeated-pixel run enc
 Added Java row encoder round-trip fixtures driven by Python and CI gate before APK build. Covers RGB/grayscale, repeated and literal pixels, boundary lengths and deterministic random data. CI result pending; header validation and physical test remain open.
 
 Extracted PWG header generation and extended CI fixtures to verify header signature, dimensions, resolution, color layout and page count across A4/F4/Legal/4R. Tests are structural, not independent standards certification. CI and physical test pending.
+
+Added JPEG 90-degree rotation in preview and actual print payload on Android 9+, bounded decode and JPEG quality 95. Unedited JPEG and PDF paths unchanged. Preview view rotation may clip in constrained layout; next improve fit and add crop. CI and device testing pending.
