@@ -35,3 +35,5 @@ Added Java row encoder round-trip fixtures driven by Python and CI gate before A
 Extracted PWG header generation and extended CI fixtures to verify header signature, dimensions, resolution, color layout and page count across A4/F4/Legal/4R. Tests are structural, not independent standards certification. CI and physical test pending.
 
 Added JPEG 90-degree rotation in preview and actual print payload on Android 9+, bounded decode and JPEG quality 95. Unedited JPEG and PDF paths unchanged. Preview view rotation may clip in constrained layout; next improve fit and add crop. CI and device testing pending.
+
+Added shared bitmap rotation and center crop ratios for preview and actual JPEG payload, with FIT_CENTER preview rather than rotating the view. Crop is centered, not freehand; ratios are not physical print sizes. CI/device testing pending. Next physical photo layout.
