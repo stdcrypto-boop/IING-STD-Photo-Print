@@ -19,3 +19,5 @@ Added PDF single page or contiguous page range via IPP page-ranges. Requires pri
 PDF preview now navigates pages and starts at selected range; actual page count checked before submitting job. Build/device tests pending. Next prioritize real print compatibility and maintenance before editor expansion.
 
 Added fresh printer format preflight before Print-Job; rejects explicitly unsupported MIME types. Raster conversion fallback and HP maintenance commands still pending. No physical verification.
+
+JPEG-to-PDF fallback implemented for printers advertising PDF but not JPEG, with fit/fill and selected paper. Default margin 5 mm; decode sample size 2; original-size fallback not supported. Temporary PDF deleted after send. PDF-to-raster and physical validation pending.
