@@ -39,3 +39,5 @@ Added JPEG 90-degree rotation in preview and actual print payload on Android 9+,
 Added shared bitmap rotation and center crop ratios for preview and actual JPEG payload, with FIT_CENTER preview rather than rotating the view. Crop is centered, not freehand; ratios are not physical print sizes. CI/device testing pending. Next physical photo layout.
 
 Added single passport photo PDF layout (20x30, 30x40, 40x60 mm) top-left, minimum 5 mm inset, forced no scaling. Requires printer native PDF and no-scaling support; raster fallback intentionally rejects none. Preview shows crop only, not full sheet. Physical dimensions and CI pending verification; next sheet preview and repeat layout.
+
+Added repeated same-photo layout 1–20 copies per sheet, configurable gap 0/2/3/5/10 mm, shared physical cell geometry for PDF and sheet preview, overflow rejection and scrollable editor. Invalid layout clears preview and print reports maximum. Native PDF/no scaling still required; CI and physical size verification pending. Multi-image collage not yet implemented.
