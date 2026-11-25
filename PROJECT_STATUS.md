@@ -7,3 +7,5 @@ Added DNS-SD discovery for first _ipp._tcp printer, with manual URI fallback. Bu
 Added IPP attribute parsing and scrollable capability report (formats, named media, media types, color, quality, operations and state). Nested media-col collections are not yet interpreted; custom F4 and Print-Job remain pending. Build and physical tests pending.
 
 Direct Print-Job implemented for native PDF/JPEG with strict attribute fidelity, A4/F4/Legal/4R selection and confirmation. F4 uses custom keyword only; media-col and raster fallback still pending. Printer may reject unsupported formats/media or chunked HTTP. No physical validation yet. Custom launcher icon registered.
+
+F4 now encoded using IPP media-col with 21000 x 33000 hundredths mm. Added optional quality, color, media type and copies. Fixed fidelity attribute name length. Strict fidelity remains; actual device support and build pending. Next: preview, raster fallback, supported-option filtering and maintenance investigation.
