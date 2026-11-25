@@ -31,3 +31,5 @@ User reported green build for previous raster stage. Added explicit monochrome s
 User reported green for grayscale/resolution stage. Added repeated-pixel run encoding for PWG rows, preserving literal runs and single pixels. Intended to reduce spool size on blank/text pages. Independent decoder fixtures and new CI build remain pending; no physical test claimed.
 
 Added Java row encoder round-trip fixtures driven by Python and CI gate before APK build. Covers RGB/grayscale, repeated and literal pixels, boundary lengths and deterministic random data. CI result pending; header validation and physical test remain open.
+
+Extracted PWG header generation and extended CI fixtures to verify header signature, dimensions, resolution, color layout and page count across A4/F4/Legal/4R. Tests are structural, not independent standards certification. CI and physical test pending.
