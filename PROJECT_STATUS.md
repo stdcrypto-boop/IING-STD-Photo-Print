@@ -37,3 +37,5 @@ Extracted PWG header generation and extended CI fixtures to verify header signat
 Added JPEG 90-degree rotation in preview and actual print payload on Android 9+, bounded decode and JPEG quality 95. Unedited JPEG and PDF paths unchanged. Preview view rotation may clip in constrained layout; next improve fit and add crop. CI and device testing pending.
 
 Added shared bitmap rotation and center crop ratios for preview and actual JPEG payload, with FIT_CENTER preview rather than rotating the view. Crop is centered, not freehand; ratios are not physical print sizes. CI/device testing pending. Next physical photo layout.
+
+Added single passport photo PDF layout (20x30, 30x40, 40x60 mm) top-left, minimum 5 mm inset, forced no scaling. Requires printer native PDF and no-scaling support; raster fallback intentionally rejects none. Preview shows crop only, not full sheet. Physical dimensions and CI pending verification; next sheet preview and repeat layout.
