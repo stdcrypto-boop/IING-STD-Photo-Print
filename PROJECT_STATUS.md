@@ -3,3 +3,5 @@
 Next: DNS-SD discovery, parse printer attributes, validate formats and custom F4 media-col, implement direct Print-Job with supported formats, PDF/image rendering and preview. Never claim physical print success based on build alone.
 
 Added DNS-SD discovery for first _ipp._tcp printer, with manual URI fallback. Build and hardware discovery pending. Maintenance target: investigate HP-specific supported cleaning/alignment commands; no unverified commands or dummy controls.
+
+Added IPP attribute parsing and scrollable capability report (formats, named media, media types, color, quality, operations and state). Nested media-col collections are not yet interpreted; custom F4 and Print-Job remain pending. Build and physical tests pending.
