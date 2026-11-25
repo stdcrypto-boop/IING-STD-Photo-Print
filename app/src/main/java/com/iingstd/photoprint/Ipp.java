@@ -58,11 +58,16 @@ final class Ipp {
  attr(d,0x37,"","");if(!type.isEmpty()){attr(d,0x4a,"","media-type");attr(d,0x44,"",type);}if(margin>=0){for(String side:new String[]{"top","bottom","left","right"}){attr(d,0x4a,"","media-"+side+"-margin");integer(d,0x21,"",margin*100);}}attr(d,0x37,"","");
  }else{attr(d,0x44,"media",media);if(!type.isEmpty())attr(d,0x44,"media-type",type);}
  if(first>0){d.writeByte(0x33);d.writeShort(11);d.writeBytes("page-ranges");d.writeShort(8);d.writeInt(first);d.writeInt(last);}if(!scaling.isEmpty())attr(d,0x44,"print-scaling",scaling);if(quality!=0)integer(d,0x23,"print-quality",quality);if(!color.isEmpty())attr(d,0x44,"print-color-mode",color);if(copies>1)integer(d,0x21,"copies",copies);d.writeByte(3);
- HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(60000);c.setRequestMethod("POST");c.setDoOutput(true);c.setChunkedStreamingMode(16384);c.setRequestProperty("Content-Type","application/ipp");
- try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());byte[] buf=new byte[16384];int n;while((n=document.read(buf))!=-1)out.write(buf,0,n);}
+ if(cacheDirectory==null)throw new IOException("Cache aplikasi belum siap");
+ File spool=File.createTempFile("ipp-job-",".bin",cacheDirectory);
+ try{
+ try(OutputStream out=new FileOutputStream(spool)){out.write(bytes.toByteArray());byte[] buf=new byte[65536];int n;while((n=document.read(buf))!=-1){if(n>0)out.write(buf,0,n);}}
+ HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(120000);c.setRequestMethod("POST");c.setDoOutput(true);c.setFixedLengthStreamingMode(spool.length());c.setRequestProperty("Content-Type","application/ipp");
+ try(InputStream payload=new FileInputStream(spool);OutputStream out=c.getOutputStream()){byte[] buf=new byte[65536];int n;while((n=payload.read(buf))!=-1)out.write(buf,0,n);}
  if(c.getResponseCode()!=200)throw new IOException("HTTP "+c.getResponseCode());
  try(DataInputStream in=new DataInputStream(c.getInputStream())){in.readUnsignedShort();int status=in.readUnsignedShort();if(in.readInt()!=2)throw new IOException("Request ID salah");if(status!=0)throw new IOException("IPP status "+Integer.toHexString(status)+"; periksa printer sebelum mencoba lagi");return "Job diterima printer. Periksa hasil fisik.";}
  }finally{c.disconnect();}
+ }finally{spool.delete();}
  }
 
 }
