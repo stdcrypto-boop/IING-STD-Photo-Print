@@ -3,6 +3,19 @@ import java.io.*;import java.net.*;import java.nio.charset.StandardCharsets;
 final class Ipp {
  static java.io.File cacheDirectory;
  static String capability(String report,String key){for(String line:report.split("\\n"))if(line.startsWith(key+": "))return line.substring(key.length()+2);return "";}
+ static int rasterPixel(int pixel,boolean gray){if(!gray)return pixel&0xffffff;return (((pixel>>16)&255)*299+((pixel>>8)&255)*587+(pixel&255)*114+500)/1000;}
+ static void writeRasterPixel(DataOutputStream out,int pixel,boolean gray)throws IOException{if(!gray){out.writeByte(pixel>>16);out.writeByte(pixel>>8);}out.writeByte(pixel);}
+ static void writeRasterRow(DataOutputStream out,int[] row,boolean gray)throws IOException{
+ out.writeByte(0);
+ for(int x=0;x<row.length;){
+ int pixel=rasterPixel(row[x],gray),run=1;
+ while(run<128&&x+run<row.length&&rasterPixel(row[x+run],gray)==pixel)run++;
+ if(run>1){out.writeByte(run-1);writeRasterPixel(out,pixel,gray);x+=run;continue;}
+ int count=1;
+ while(count<128&&x+count<row.length){int pos=x+count;if(pos+1<row.length&&rasterPixel(row[pos],gray)==rasterPixel(row[pos+1],gray))break;count++;}
+ out.writeByte(count==1?0:257-count);for(int j=0;j<count;j++)writeRasterPixel(out,rasterPixel(row[x+j],gray),gray);x+=count;
+ }
+ }
  static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color)throws Exception{
  String types=capability(report,"pwg-raster-document-type-supported");
  boolean gray="monochrome".equals(color);int channels=gray?1:3;
@@ -19,7 +32,7 @@ final class Ipp {
  for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
  java.nio.ByteBuffer header=java.nio.ByteBuffer.allocate(1796);header.put("PwgRaster".getBytes(StandardCharsets.US_ASCII));header.putInt(276,dpi);header.putInt(280,dpi);header.putInt(340,1);header.putInt(352,(int)Math.round(mmw*72.0/2540));header.putInt(356,(int)Math.round(mmh*72.0/2540));header.putInt(372,w);header.putInt(376,h);header.putInt(384,8);header.putInt(388,8*channels);header.putInt(392,w*channels);header.putInt(400,gray?18:19);header.putInt(420,channels);header.putInt(452,end-begin);header.putInt(456,1);header.putInt(460,1);header.putInt(464,0);header.putInt(468,0);header.putInt(472,w);header.putInt(476,h);out.write(header.array());
  android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(w,h,android.graphics.Bitmap.Config.ARGB_8888);
- try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=Math.min((float)w/page.getWidth(),(float)h/page.getHeight());android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);out.writeByte(0);for(int x=0;x<w;){int count=Math.min(128,w-x);if(count==1){out.writeByte(0);}else{out.writeByte(257-count);}for(int j=0;j<count;j++){int pixel=row[x+j];if(gray){int red=(pixel>>16)&255,green=(pixel>>8)&255,blue=pixel&255;out.writeByte((red*299+green*587+blue*114+500)/1000);}else{out.writeByte(pixel>>16);out.writeByte(pixel>>8);out.writeByte(pixel);}}x+=count;}}}finally{bitmap.recycle();}
+ try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=Math.min((float)w/page.getWidth(),(float)h/page.getHeight());android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);writeRasterRow(out,row,gray);}}finally{bitmap.recycle();}
  }}
  }}finally{source.delete();}
  }
