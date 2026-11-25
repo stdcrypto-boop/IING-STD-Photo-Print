@@ -43,3 +43,5 @@ Added single passport photo PDF layout (20x30, 30x40, 40x60 mm) top-left, minimu
 Added repeated same-photo layout 1–20 copies per sheet, configurable gap 0/2/3/5/10 mm, shared physical cell geometry for PDF and sheet preview, overflow rejection and scrollable editor. Invalid layout clears preview and print reports maximum. Native PDF/no scaling still required; CI and physical size verification pending. Multi-image collage not yet implemented.
 
 Added live sheet layout summary and visible overflow error; print confirmation now validates layout before dismissal and retains editor on invalid count. Recycles temporary edited bitmap on invalid layout. CI status not available through PR-only workflow lookup; physical test pending.
+
+Added horizontal and vertical crop anchor sliders (0–100%, centered default) shared by JPEG and passport PDF preview/print. Fixed aspect presets remain; freeform rectangle not implemented. CI and device tests pending.
