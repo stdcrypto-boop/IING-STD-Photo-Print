@@ -1,6 +1,13 @@
 package com.iingstd.photoprint;
 import java.io.*;import java.net.*;import java.nio.charset.StandardCharsets;
 final class Ipp {
+ static java.io.File cacheDirectory;
+ static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling)throws IOException{
+ android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inSampleSize=2;android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeStream(input,null,options);if(bitmap==null)throw new IOException("Foto tidak dapat dibaca");
+ int w=595,h=842;if(media.equals("custom_f4_210x330mm"))h=935;else if(media.equals("na_legal_8.5x14in")){w=612;h=1008;}else if(media.equals("na_index-4x6_4x6in")){w=288;h=432;}
+ float m=(margin<0?5:margin)*72f/25.4f;float aw=w-2*m,ah=h-2*m;float s="fill".equals(scaling)?Math.max(aw/bitmap.getWidth(),ah/bitmap.getHeight()):Math.min(aw/bitmap.getWidth(),ah/bitmap.getHeight());float bw=bitmap.getWidth()*s,bh=bitmap.getHeight()*s;
+ try(android.graphics.pdf.PdfDocument pdf=new android.graphics.pdf.PdfDocument()){android.graphics.pdf.PdfDocument.Page page=pdf.startPage(new android.graphics.pdf.PdfDocument.PageInfo.Builder(w,h,1).create());android.graphics.Canvas canvas=page.getCanvas();canvas.drawColor(android.graphics.Color.WHITE);canvas.save();canvas.clipRect(m,m,w-m,h-m);canvas.drawBitmap(bitmap,null,new android.graphics.RectF((w-bw)/2,(h-bh)/2,(w+bw)/2,(h+bh)/2),new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));canvas.restore();pdf.finishPage(page);try(OutputStream out=new FileOutputStream(target)){pdf.writeTo(out);}}finally{bitmap.recycle();}
+ }
  static void attr(DataOutputStream d,int tag,String name,String value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8),v=value.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(v.length);d.write(v);}
  static String probe(String uri)throws Exception {return query(uri);}
  static String query(String uri)throws Exception {URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Gunakan alamat ipp:// printer");URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL(); ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);d.writeShort(0x0101);d.writeShort(0x000b);d.writeInt(1);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x44,"requested-attributes","all");d.writeByte(3);HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(10000);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/ipp");try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());}if(c.getResponseCode()!=200)throw new IOException("HTTP "+c.getResponseCode());try(DataInputStream in=new DataInputStream(c.getInputStream())){in.readUnsignedShort();int status=in.readUnsignedShort();if(in.readInt()!=1)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status));return "Printer merespons IPP.\n"+readCapabilities(in);}}finally{c.disconnect();}}
@@ -25,7 +32,13 @@ final class Ipp {
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last)throws Exception{
- String capabilities=query(uri);String formats=null;for(String line:capabilities.split("\\n")){if(line.startsWith("document-format-supported: "))formats=line.substring("document-format-supported: ".length());}if(formats!=null&&!java.util.Arrays.asList(formats.split(", ")).contains(mime))throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
+ String capabilities=query(uri);String formats=null;for(String line:capabilities.split("\\n")){if(line.startsWith("document-format-supported: "))formats=line.substring("document-format-supported: ".length());}if(formats!=null&&!java.util.Arrays.asList(formats.split(", ")).contains(mime)){
+ if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("application/pdf")&&!"none".equals(scaling)&&cacheDirectory!=null){
+ java.io.File temp=java.io.File.createTempFile("photo-print-",".pdf",cacheDirectory);
+ try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return print(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
+ }
+ throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
+ }
  URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Alamat IPP tidak valid");
  URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL();
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
