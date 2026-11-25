@@ -29,3 +29,5 @@ Implemented experimental PDF-to-PWG Raster fallback for explicitly advertised 30
 User reported green build for previous raster stage. Added explicit monochrome sgray_8 encoding and advertised square 300/200/150 dpi selection. New build and independent raster validation pending; physical printing unverified. Next validate raster headers and row encoding with independent fixtures.
 
 User reported green for grayscale/resolution stage. Added repeated-pixel run encoding for PWG rows, preserving literal runs and single pixels. Intended to reduce spool size on blank/text pages. Independent decoder fixtures and new CI build remain pending; no physical test claimed.
+
+Added Java row encoder round-trip fixtures driven by Python and CI gate before APK build. Covers RGB/grayscale, repeated and literal pixels, boundary lengths and deterministic random data. CI result pending; header validation and physical test remain open.
