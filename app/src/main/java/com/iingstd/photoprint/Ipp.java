@@ -122,6 +122,13 @@ final class Ipp {
  }
  static String printInternal(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last,int orientation)throws Exception{
  if(copies<1||copies>99)throw new IOException("Jumlah salinan harus 1–99");
+ if(copies>1){
+ File repeat=File.createTempFile("copies-",".bin",cacheDirectory);
+ try{try(OutputStream out=new FileOutputStream(repeat)){byte[] buf=new byte[65536];int n;while((n=document.read(buf))!=-1)if(n>0)out.write(buf,0,n);}
+ int accepted=0;for(int i=0;i<copies;i++){try(InputStream in=new FileInputStream(repeat)){printInternal(uri,mime,in,media,quality,color,type,1,margin,scaling,first,last,orientation);accepted++;}catch(Exception e){throw new IOException("Salinan diterima: "+accepted+"/"+copies+". Salinan berikutnya gagal atau belum terkonfirmasi: "+e.getMessage()+". Jangan ulang seluruh pekerjaan sebelum memeriksa printer.",e);}}
+ return copies+" pekerjaan salinan diterima printer. Periksa hasil fisik.";
+ }finally{repeat.delete();}
+ }
  if(first<0||last<first||(first==0&&last!=0))throw new IOException("Rentang halaman tidak valid");
  String capabilities=query(uri);
  if("false".equals(capability(capabilities,"printer-is-accepting-jobs")))throw new IOException("Printer sedang tidak menerima pekerjaan cetak");
@@ -171,7 +178,7 @@ final class Ipp {
  HttpURLConnection c=printerConnection(url);try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(120000);c.setRequestMethod("POST");c.setDoOutput(true);c.setFixedLengthStreamingMode(spool.length());c.setRequestProperty("Content-Type","application/ipp");c.setRequestProperty("Accept","application/ipp");
  try(InputStream payload=new FileInputStream(spool);OutputStream out=c.getOutputStream()){byte[] buf=new byte[65536];int n;while((n=payload.read(buf))!=-1)out.write(buf,0,n);}
  checkResponse(c);
- try(DataInputStream in=new DataInputStream(c.getInputStream())){int version=in.readUnsignedShort();if(version!=0x0100&&version!=0x0101&&version!=0x0200&&version!=0x0201&&version!=0x0202)throw new IOException("Versi respons cetak IPP tidak valid: "+Integer.toHexString(version));int status=in.readUnsignedShort();if(in.readInt()!=2)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status)+"; periksa printer sebelum mencoba lagi");return status==0?"Job diterima printer. Periksa hasil fisik.":"Job diterima dengan peringatan IPP "+Integer.toHexString(status)+". Periksa hasil; jangan langsung cetak ulang.";}
+ try(DataInputStream in=new DataInputStream(c.getInputStream())){int version=in.readUnsignedShort();if(version!=0x0100&&version!=0x0101&&version!=0x0200&&version!=0x0201&&version!=0x0202)throw new IOException("Versi respons cetak IPP tidak valid: "+Integer.toHexString(version));int status=in.readUnsignedShort();if(in.readInt()!=2)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status)+(status==0x040b?" (atribut atau nilai cetak tidak didukung)":"")+"; periksa printer sebelum mencoba lagi");return status==0?"Job diterima printer. Periksa hasil fisik.":"Job diterima dengan peringatan IPP "+Integer.toHexString(status)+". Periksa hasil; jangan langsung cetak ulang.";}
  }finally{c.disconnect();}
  }finally{spool.delete();}
  }
