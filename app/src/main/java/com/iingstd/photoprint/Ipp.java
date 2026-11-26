@@ -69,10 +69,11 @@ final class Ipp {
  int nl=in.readUnsignedShort();byte[] nb=new byte[nl];in.readFully(nb);if(nl>0)name=new String(nb,StandardCharsets.UTF_8);
  int vl=in.readUnsignedShort();byte[] v=new byte[vl];in.readFully(v);
  if(tag==0x34){depth++;continue;}if(tag==0x37){depth=Math.max(0,depth-1);continue;}if(depth>0)continue;
- if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","printer-state","printer-state-reasons","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported","pwg-raster-document-type-supported","pwg-raster-document-resolution-supported","printer-resolution-supported","printer-resolution-default").contains(name))continue;
+ if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","printer-state","printer-state-reasons","printer-is-accepting-jobs","queued-job-count","copies-supported","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported","pwg-raster-document-type-supported","pwg-raster-document-resolution-supported","printer-resolution-supported","printer-resolution-default").contains(name))continue;
  String val;
  if((tag==0x21||tag==0x23)&&vl==4){int n=java.nio.ByteBuffer.wrap(v).getInt();val=name.equals("print-quality-supported")?(n==3?"Draft":n==4?"Normal":n==5?"High":String.valueOf(n)):String.valueOf(n);}
  else if(tag==0x32&&vl==9){java.nio.ByteBuffer resolution=java.nio.ByteBuffer.wrap(v);int x=resolution.getInt(),y=resolution.getInt(),unit=resolution.get()&255;val=x+"x"+y+(unit==3?" dpi":unit==4?" dpcm":" (unknown unit)");}
+ else if(tag==0x33&&vl==8){java.nio.ByteBuffer range=java.nio.ByteBuffer.wrap(v);val=range.getInt()+"-"+range.getInt();}
  else if(tag==0x22&&vl==1)val=v[0]==0?"false":"true";
  else if(tag>=0x40&&tag<=0x4f)val=new String(v,StandardCharsets.UTF_8);else continue;
  values.computeIfAbsent(name,k->new java.util.ArrayList<>()).add(val);
@@ -84,7 +85,11 @@ final class Ipp {
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last)throws Exception{
+ if(copies<1||copies>99)throw new IOException("Jumlah salinan harus 1–99");
+ if(first<0||last<first||(first==0&&last!=0))throw new IOException("Rentang halaman tidak valid");
  String capabilities=query(uri);
+ if("false".equals(capability(capabilities,"printer-is-accepting-jobs")))throw new IOException("Printer sedang tidak menerima pekerjaan cetak");
+ String copyRange=capability(capabilities,"copies-supported");if(copyRange.matches("[0-9]+-[0-9]+")){String[] bounds=copyRange.split("-");if(copies<Integer.parseInt(bounds[0])||copies>Integer.parseInt(bounds[1]))throw new IOException("Jumlah salinan tidak didukung: "+copyRange);}
  requireSupported(capabilities,"print-color-mode-supported",color,"Mode warna");
  requireSupported(capabilities,"media-type-supported",type,"Jenis kertas");
  requireSupported(capabilities,"print-quality-supported",quality==0?"":quality==3?"Draft":quality==4?"Normal":quality==5?"High":String.valueOf(quality),"Kualitas");
@@ -106,7 +111,9 @@ final class Ipp {
  }
  throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
  }
+ if(first>0&&"false".equals(capability(capabilities,"page-ranges-supported")))throw new IOException("Printer tidak mendukung pilihan halaman untuk format ini");
  requireSupported(capabilities,"print-scaling-supported",scaling,"Skala cetak");
+ if(margin>=0)for(String side:new String[]{"top","bottom","left","right"})requireSupported(capabilities,"media-"+side+"-margin-supported",String.valueOf(margin*100),"Margin "+side);
  URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Alamat IPP tidak valid");
  URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL();
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
