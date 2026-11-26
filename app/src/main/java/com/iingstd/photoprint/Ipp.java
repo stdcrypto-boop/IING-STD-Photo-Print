@@ -84,6 +84,14 @@ final class Ipp {
  java.io.File temp=java.io.File.createTempFile("photo-print-",".pdf",cacheDirectory);
  try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return print(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
  }
+ if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("image/pwg-raster")&&cacheDirectory!=null&&margin<0&&!"none".equals(scaling)){
+ File pdfTemp=File.createTempFile("photo-raster-",".pdf",cacheDirectory);
+ try{photoPdf(document,pdfTemp,media,margin,scaling);File rasterTemp=File.createTempFile("photo-raster-",".ras",cacheDirectory);
+ try{try(InputStream pdf=new FileInputStream(pdfTemp)){rasterPdf(pdf,rasterTemp,capabilities,media,0,0,color,true);}
+ try(InputStream raster=new FileInputStream(rasterTemp)){return print(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none",0,0)+" (JPEG ke PWG Raster)";}
+ }finally{rasterTemp.delete();}
+ }finally{pdfTemp.delete();}
+ }
  if("application/pdf".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("image/pwg-raster")&&cacheDirectory!=null&&margin<0&&(scaling.isEmpty()||"fit".equals(scaling)||"none".equals(scaling))){
  File temp=File.createTempFile("pwg-print-",".ras",cacheDirectory);try{rasterPdf(document,temp,capabilities,media,first,last,color,"none".equals(scaling));try(InputStream raster=new FileInputStream(temp)){return print(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none".equals(scaling)?"none":"",0,0)+" (PDF ke PWG Raster)";}}finally{temp.delete();}
  }
