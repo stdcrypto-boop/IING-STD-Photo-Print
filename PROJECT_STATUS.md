@@ -59,3 +59,5 @@ Added JPEG-to-PWG raster fallback via bounded photo PDF intermediate, preserving
 Added preflight checks for explicitly advertised color mode, media type, print quality and final print scaling. Missing attributes do not cause rejection; strict IPP fidelity remains. Scaling validated after format conversion so software fit/fill remains possible. Previous combined status empty; new build and physical test unverified. Next capability fixtures and collage.
 
 Added CI capability fixtures using production capability and requireSupported methods: supported options, explicit rejection, exact token matching, missing attributes and diagnostic content. Previous combined status empty; fixtures and APK build not executed in this session. Next multi-image collage.
+
+Implemented separate multi-JPEG collage picker (1–20 images), shared passport dimensions and gap/overflow checks, center crop, bounded 1200px decoding, actual-size PDF generation and IPP submission. One sheet copy, no visual collage preview or per-photo editing yet; next add preview before printing. Previous combined status empty; build and physical tests unverified.
