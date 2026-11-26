@@ -61,3 +61,5 @@ Added preflight checks for explicitly advertised color mode, media type, print q
 Added CI capability fixtures using production capability and requireSupported methods: supported options, explicit rejection, exact token matching, missing attributes and diagnostic content. Previous combined status empty; fixtures and APK build not executed in this session. Next multi-image collage.
 
 Implemented separate multi-JPEG collage picker (1–20 images), shared passport dimensions and gap/overflow checks, center crop, bounded 1200px decoding, actual-size PDF generation and IPP submission. One sheet copy, no visual collage preview or per-photo editing yet; next add preview before printing. Previous combined status empty; build and physical tests unverified.
+
+Added scrollable collage dialog with live 900px full-sheet preview, shared physical cell geometry and center crop, bounded thumbnail decoding off UI thread, stale-result guard and disabled print until valid preview. Per-photo editing still pending. Prior combined status empty; build and device tests unverified.
