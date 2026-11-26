@@ -73,7 +73,8 @@ final class Ipp {
  }
  static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling)throws IOException{photoPdf(input,target,media,margin,scaling,false);}
  static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape)throws IOException{photoPdf(input,target,media,margin,scaling,landscape,0);}
- static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape,int rotation)throws IOException{
+ static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape,int rotation)throws IOException{photoPdf(input,target,media,margin,scaling,landscape,rotation,0,0);}
+ static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape,int rotation,float widthMm,float heightMm)throws IOException{
  java.io.File source=java.io.File.createTempFile("photo-source-",".jpg",cacheDirectory);
  android.graphics.Bitmap bitmap;
  try{try(OutputStream out=new FileOutputStream(source)){byte[] buffer=new byte[16384];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);}
@@ -84,7 +85,7 @@ final class Ipp {
  if(rotation!=0){android.graphics.Matrix rotate=new android.graphics.Matrix();rotate.setRotate(rotation);android.graphics.Bitmap rotated=android.graphics.Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),rotate,true);if(rotated!=bitmap)bitmap.recycle();bitmap=rotated;}
  int w=595,h=842;if(media.equals("custom_10rmini_210x252mm"))h=714;else if(media.equals("custom_f4_210x330mm"))h=935;else if(media.equals("na_legal_8.5x14in")){w=612;h=1008;}else if(media.equals("na_index-4x6_4x6in")){w=288;h=432;}
  if(landscape){int swap=w;w=h;h=swap;}
- float m=(margin<0?5:margin)*72f/25.4f;float aw=w-2*m,ah=h-2*m;float s="fill".equals(scaling)?Math.max(aw/bitmap.getWidth(),ah/bitmap.getHeight()):Math.min(aw/bitmap.getWidth(),ah/bitmap.getHeight());float bw=bitmap.getWidth()*s,bh=bitmap.getHeight()*s;
+ float m=(margin<0?5:margin)*72f/25.4f;float aw=w-2*m,ah=h-2*m;float s="fill".equals(scaling)?Math.max(aw/bitmap.getWidth(),ah/bitmap.getHeight()):Math.min(aw/bitmap.getWidth(),ah/bitmap.getHeight());float bw=bitmap.getWidth()*s,bh=bitmap.getHeight()*s;if("physical".equals(scaling)){float boxW=widthMm*72f/25.4f,boxH=heightMm*72f/25.4f;if(!(boxW>0&&boxH>0&&boxW<=aw+0.5f&&boxH<=ah+0.5f)){bitmap.recycle();throw new IOException("Ukuran foto melebihi area cetak");}s=Math.min(boxW/bitmap.getWidth(),boxH/bitmap.getHeight());bw=bitmap.getWidth()*s;bh=bitmap.getHeight()*s;}
  android.graphics.pdf.PdfDocument pdf=new android.graphics.pdf.PdfDocument();try{android.graphics.pdf.PdfDocument.Page page=pdf.startPage(new android.graphics.pdf.PdfDocument.PageInfo.Builder(w,h,1).create());android.graphics.Canvas canvas=page.getCanvas();canvas.drawColor(android.graphics.Color.WHITE);canvas.save();canvas.clipRect(m,m,w-m,h-m);canvas.drawBitmap(bitmap,null,new android.graphics.RectF((w-bw)/2,(h-bh)/2,(w+bw)/2,(h+bh)/2),new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));canvas.restore();pdf.finishPage(page);try(OutputStream out=new FileOutputStream(target)){pdf.writeTo(out);}}finally{try{pdf.close();}finally{bitmap.recycle();}}
  }
  static void attr(DataOutputStream d,int tag,String name,String value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8),v=value.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(v.length);d.write(v);}
@@ -113,9 +114,10 @@ final class Ipp {
  static void integer(DataOutputStream d,int tag,String name,int value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(4);d.writeInt(value);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
- static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation)throws Exception{
- String report=query(uri);File pdf=File.createTempFile("layout-",".pdf",cacheDirectory);File raster=null;
- try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape,copies);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
+ static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation)throws Exception{return printPhotoLayout(uri,document,media,quality,color,type,copies,landscape,scaling,rotation,0,0);}
+ static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation,float widthMm,float heightMm)throws Exception{
+ if(copies<1||copies>99)throw new IOException("Jumlah salinan harus 1–99");String report=query(uri);File pdf=File.createTempFile("layout-",".pdf",cacheDirectory);File raster=null;
+ try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation,widthMm,heightMm);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape,copies);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
  }
  static String printOriented(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int first,int last,boolean landscape)throws Exception{
  if(copies>1&&"image/jpeg".equals(mime))return printPhotoLayout(uri,document,media,quality,color,type,copies,landscape,"fit",0);
