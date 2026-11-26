@@ -77,3 +77,5 @@ Persisted six print setting selections locally with bounds checking. User screen
 Added settings reset, read-only live IPP diagnostics with explicit maintenance limitations, release page navigation and installed version label. Release navigation is not an in-app updater; no release or signing continuity verified. Build pending.
 
 Set candidate version 0.2/versionCode 2 and added RELEASE_CHECKLIST.md for build, signing, upgrade, physical printer, layout and offline acceptance. Candidate not released; debug signing continuity and actual maintenance protocol unresolved. No latest CI verification.
+
+Added activity-local print submission guard across document/photo and collage paths, reset on completion, and collage copy count validation 1–99. Does not prevent duplicates across activity recreation or printer-side retries. Build pending.
