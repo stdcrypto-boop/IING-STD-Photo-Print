@@ -45,3 +45,30 @@ with tempfile.TemporaryDirectory() as d:
  p=pathlib.Path(d)/"RasterFixture.java"
  p.write_text(harness)
  subprocess.run(["java",str(p)],check=True)
+
+# Exercise production layout methods with a minimal RectF substitute.
+source=pathlib.Path("app/src/main/java/com/iingstd/photoprint/MainActivity.java").read_text()
+methods=source[source.index(" static float[] paperMm("):source.index(" InputStream passportInput(")].replace("android.graphics.RectF","RectF")
+harness="""import java.io.*;
+class LayoutFixture {
+static class RectF {float left,top,right,bottom;RectF(float a,float b,float c,float d){left=a;top=b;right=c;bottom=d;}}
+"""+methods+"""
+static void require(boolean b){if(!b)throw new AssertionError("layout geometry");}
+public static void main(String[] args)throws Exception{
+String[] media={"iso_a4_210x297mm","custom_f4_210x330mm","na_legal_8.5x14in","na_index-4x6_4x6in"};
+for(String paper:media)for(int size=1;size<=3;size++)for(int gap:new int[]{0,2,3,5,10})for(int margin:new int[]{-1,0,5,10}){
+float[] dimensions=paperMm(paper);int w=new int[]{0,20,30,40}[size],h=new int[]{0,30,40,60}[size],m=Math.max(5,margin);
+int cols=(int)((dimensions[0]-2*m+gap)/(w+gap)),rows=(int)((dimensions[1]-2*m+gap)/(h+gap));
+RectF[] cells=passportCells(size,paper,margin,cols*rows,gap);
+require(cells.length==cols*rows);
+for(int i=0;i<cells.length;i++){RectF c=cells[i];require(c.left>=m&&c.top>=m&&c.right<=dimensions[0]-m+0.001&&c.bottom<=dimensions[1]-m+0.001);require(c.right-c.left==w&&c.bottom-c.top==h);if(i%cols>0)require(c.left-cells[i-1].right==gap);if(i>=cols)require(c.top-cells[i-cols].bottom==gap);}
+try{passportCells(size,paper,margin,cols*rows+1,gap);throw new AssertionError("overflow accepted");}catch(IOException expected){}
+}
+System.out.println("Passport layout fixtures passed");
+}
+}
+"""
+with tempfile.TemporaryDirectory() as d:
+ p=pathlib.Path(d)/"LayoutFixture.java"
+ p.write_text(harness)
+ subprocess.run(["java",str(p)],check=True)
