@@ -11,12 +11,12 @@ import java.io.*;
 import java.util.*;
 public class SystemPrintService extends PrintService {
  final java.util.concurrent.ExecutorService worker=java.util.concurrent.Executors.newSingleThreadExecutor();
- String address(){return getSharedPreferences("MainActivity",0).getString("uri","").trim();}
+ String address(){String saved=getSharedPreferences("MainActivity",0).getString("uri","").trim();return saved.isEmpty()?"ipp://192.168.223.1:631/ipp/print":saved;}
  @Override protected void onConnected(){Ipp.cacheDirectory=getCacheDir();Ipp.connectivity=(android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);}
  @Override protected PrinterDiscoverySession onCreatePrinterDiscoverySession(){return new PrinterDiscoverySession(){
- boolean active; int generation;
+ boolean active; int generation; boolean probing; final Handler handler=new Handler(Looper.getMainLooper()); final Runnable retry=()->{if(active)refresh();};
  @Override public void onStartPrinterDiscovery(List<PrinterId> priority){active=true;refresh();}
- void refresh(){final int token=++generation;final String uri=address();worker.execute(()->{String report;try{report=Ipp.probe(uri);}catch(Exception e){report=null;}final String caps=report;new Handler(Looper.getMainLooper()).post(()->{if(!active||token!=generation)return;PrinterId id=generatePrinterId("configured-ipp");if(caps==null){removePrinters(Collections.singletonList(id));return;}
+ void refresh(){if(probing)return;probing=true;handler.removeCallbacks(retry);final int token=++generation;final String uri=address();worker.execute(()->{String report;try{report=Ipp.probe(uri);}catch(Exception e){report=null;}final String caps=report;new Handler(Looper.getMainLooper()).post(()->{probing=false;if(!active)return;if(token!=generation){refresh();return;}PrinterId id=generatePrinterId("configured-ipp");if(caps==null){removePrinters(Collections.singletonList(id));handler.postDelayed(retry,4000);return;}
  PrinterCapabilitiesInfo.Builder b=new PrinterCapabilitiesInfo.Builder(id);
  String media=Ipp.capability(caps,"media-supported");boolean any=false;
  if(media.contains("iso_a4_210x297mm")){b.addMediaSize(PrintAttributes.MediaSize.ISO_A4,true);any=true;}
@@ -27,8 +27,8 @@ public class SystemPrintService extends PrintService {
  b.setMinMargins(new PrintAttributes.Margins(197,197,197,197));
  String colors=Ipp.capability(caps,"print-color-mode-supported");int modes=colors.contains("color")?PrintAttributes.COLOR_MODE_COLOR|PrintAttributes.COLOR_MODE_MONOCHROME:PrintAttributes.COLOR_MODE_MONOCHROME;
  b.setColorModes(modes,PrintAttributes.COLOR_MODE_MONOCHROME);
- addPrinters(Collections.singletonList(new PrinterInfo.Builder(id,"IING STD IPP",PrinterInfo.STATUS_IDLE).setCapabilities(b.build()).build()));});});}
- @Override public void onStopPrinterDiscovery(){active=false;generation++;}
+ addPrinters(Collections.singletonList(new PrinterInfo.Builder(id,"IING STD • "+Ipp.capability(caps,"printer-name"),PrinterInfo.STATUS_IDLE).setCapabilities(b.build()).build()));});});}
+ @Override public void onStopPrinterDiscovery(){active=false;generation++;handler.removeCallbacks(retry);}
  @Override public void onValidatePrinters(List<PrinterId> ids){if(active)refresh();}
  @Override public void onStartPrinterStateTracking(PrinterId id){if(active)refresh();}
  @Override public void onStopPrinterStateTracking(PrinterId id){}
