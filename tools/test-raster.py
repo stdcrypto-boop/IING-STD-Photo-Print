@@ -92,3 +92,31 @@ with tempfile.TemporaryDirectory() as d:
  p=pathlib.Path(d)/"CropFixture.java"
  p.write_text(harness)
  subprocess.run(["java",str(p)],check=True)
+
+source=pathlib.Path("app/src/main/java/com/iingstd/photoprint/Ipp.java").read_text()
+methods=source[source.index(" static String capability("):source.index(" static int rasterPixel(")]
+harness="""import java.io.*;
+class CapabilityFixture {
+"""+methods+"""
+static void reject(String report,String key,String value)throws Exception{
+try{requireSupported(report,key,value,"Setting");throw new AssertionError("unsupported accepted: "+value);}catch(IOException expected){if(!expected.getMessage().contains(value))throw new AssertionError("missing diagnostic");}
+}
+public static void main(String[] args)throws Exception{
+String report="print-color-mode-supported: color, monochrome\\nmedia-type-supported: stationery, photographic-glossy\\nprint-quality-supported: Draft, Normal, High\\nprint-scaling-supported: fit, none\\n";
+String[][] accepted={{"print-color-mode-supported","color"},{"print-color-mode-supported","monochrome"},{"media-type-supported","stationery"},{"media-type-supported","photographic-glossy"},{"print-quality-supported","Draft"},{"print-quality-supported","Normal"},{"print-quality-supported","High"},{"print-scaling-supported","fit"},{"print-scaling-supported","none"},{"print-scaling-supported",""},{"missing-attribute","unknown"}};
+for(String[] a:accepted)requireSupported(report,a[0],a[1],"Setting");
+reject(report,"print-color-mode-supported","auto");
+reject(report,"media-type-supported","photographic-matte");
+reject(report,"print-quality-supported","6");
+reject(report,"print-scaling-supported","fill");
+reject(report,"print-scaling-supported","fi");
+requireSupported("","print-scaling-supported","none","Setting");
+if(!capability(report,"print-quality-supported").equals("Draft, Normal, High"))throw new AssertionError("capability parsing");
+System.out.println("Capability fixtures passed");
+}
+}
+"""
+with tempfile.TemporaryDirectory() as d:
+ p=pathlib.Path(d)/"CapabilityFixture.java"
+ p.write_text(harness)
+ subprocess.run(["java",str(p)],check=True)
