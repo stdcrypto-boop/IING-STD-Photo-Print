@@ -120,3 +120,29 @@ with tempfile.TemporaryDirectory() as d:
  p=pathlib.Path(d)/"CapabilityFixture.java"
  p.write_text(harness)
  subprocess.run(["java",str(p)],check=True)
+
+methods=source[source.index(" static URI printerUri("):source.index(" static String capability(")]
+harness="""import java.io.*;import java.net.*;
+class TransportFixture {
+"""+methods+"""
+static void reject(String value)throws Exception{try{printerUri(value);throw new AssertionError("accepted "+value);}catch(IOException expected){}}
+static class Response extends HttpURLConnection{
+final int code;final String type;
+Response(int code,String type)throws Exception{super(new URL("http://localhost"));this.code=code;this.type=type;}
+public int getResponseCode(){return code;}public String getContentType(){return type;}
+public void connect(){}public void disconnect(){}public boolean usingProxy(){return false;}
+}
+static void rejectResponse(int code,String type)throws Exception{try{checkResponse(new Response(code,type));throw new AssertionError("accepted invalid response");}catch(IOException expected){}}
+public static void main(String[] args)throws Exception{
+for(String uri:new String[]{"ipp://192.168.1.1:631/ipp/print","ipp://printer.local","ipp://[::1]:631/ipp/print"})printerUri(uri);
+for(String uri:new String[]{"http://printer.local","ipp:///print","ipp://user@printer.local","ipp://printer.local#x","ipp://printer.local?x=1","ipp://printer.local:0","ipp://printer.local:65536","ipp://bad host"})reject(uri);
+checkResponse(new Response(200,"application/ipp"));checkResponse(new Response(200,"Application/IPP; charset=binary"));
+rejectResponse(302,"application/ipp");rejectResponse(500,"application/ipp");rejectResponse(200,"text/html");rejectResponse(200,null);
+System.out.println("Transport fixtures passed");
+}
+}
+"""
+with tempfile.TemporaryDirectory() as d:
+ p=pathlib.Path(d)/"TransportFixture.java"
+ p.write_text(harness)
+ subprocess.run(["java",str(p)],check=True)
