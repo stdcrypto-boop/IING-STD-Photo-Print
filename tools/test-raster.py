@@ -137,7 +137,7 @@ public static void main(String[] args)throws Exception{
 for(String uri:new String[]{"ipp://192.168.1.1:631/ipp/print","ipp://printer.local","ipp://[::1]:631/ipp/print"})printerUri(uri);
 for(String uri:new String[]{"http://printer.local","ipp:///print","ipp://user@printer.local","ipp://printer.local#x","ipp://printer.local?x=1","ipp://printer.local:0","ipp://printer.local:65536","ipp://bad host"})reject(uri);
 checkResponse(new Response(200,"application/ipp"));checkResponse(new Response(200,"Application/IPP; charset=binary"));
-rejectResponse(302,"application/ipp");rejectResponse(500,"application/ipp");rejectResponse(200,"text/html");rejectResponse(200,null);
+rejectResponse(302,"application/ipp");rejectResponse(500,"application/ipp");rejectResponse(200,"text/html");checkResponse(new Response(200,null));checkResponse(new Response(200,"application/octet-stream"));
 System.out.println("Transport fixtures passed");
 }
 }
