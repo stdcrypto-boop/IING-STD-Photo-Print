@@ -1,6 +1,11 @@
 package com.iingstd.photoprint;
-import android.print.*;
-import android.printservice.*;
+import android.print.PrintAttributes;
+import android.print.PrinterId;
+import android.print.PrinterInfo;
+import android.print.PrinterCapabilitiesInfo;
+import android.printservice.PrintService;
+import android.printservice.PrinterDiscoverySession;
+import android.printservice.PrintJob;
 import android.os.*;
 import java.io.*;
 import java.util.*;
