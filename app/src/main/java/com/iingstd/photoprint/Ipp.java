@@ -3,6 +3,11 @@ import java.io.*;import java.net.*;import java.nio.charset.StandardCharsets;
 final class Ipp {
  static java.io.File cacheDirectory;
  static String capability(String report,String key){for(String line:report.split("\\n"))if(line.startsWith(key+": "))return line.substring(key.length()+2);return "";}
+ static void requireSupported(String report,String key,String value,String label)throws IOException{
+ if(value.isEmpty())return;
+ String advertised=capability(report,key);
+ if(!advertised.isEmpty()&&!java.util.Arrays.asList(advertised.split(", ")).contains(value))throw new IOException(label+" tidak didukung printer: "+value+". Pilihan tersedia: "+advertised);
+ }
  static int rasterPixel(int pixel,boolean gray){if(!gray)return pixel&0xffffff;return (((pixel>>16)&255)*299+((pixel>>8)&255)*587+(pixel&255)*114+500)/1000;}
  static void writeRasterPixel(DataOutputStream out,int pixel,boolean gray)throws IOException{if(!gray){out.writeByte(pixel>>16);out.writeByte(pixel>>8);}out.writeByte(pixel);}
  static void writeRasterRow(DataOutputStream out,int[] row,boolean gray)throws IOException{
@@ -79,7 +84,11 @@ final class Ipp {
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last)throws Exception{
- String capabilities=query(uri);String formats=null;for(String line:capabilities.split("\\n")){if(line.startsWith("document-format-supported: "))formats=line.substring("document-format-supported: ".length());}if(formats!=null&&!java.util.Arrays.asList(formats.split(", ")).contains(mime)){
+ String capabilities=query(uri);
+ requireSupported(capabilities,"print-color-mode-supported",color,"Mode warna");
+ requireSupported(capabilities,"media-type-supported",type,"Jenis kertas");
+ requireSupported(capabilities,"print-quality-supported",quality==0?"":quality==3?"Draft":quality==4?"Normal":quality==5?"High":String.valueOf(quality),"Kualitas");
+ String formats=null;for(String line:capabilities.split("\\n")){if(line.startsWith("document-format-supported: "))formats=line.substring("document-format-supported: ".length());}if(formats!=null&&!java.util.Arrays.asList(formats.split(", ")).contains(mime)){
  if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("application/pdf")&&!"none".equals(scaling)&&cacheDirectory!=null){
  java.io.File temp=java.io.File.createTempFile("photo-print-",".pdf",cacheDirectory);
  try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return print(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
@@ -97,6 +106,7 @@ final class Ipp {
  }
  throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
  }
+ requireSupported(capabilities,"print-scaling-supported",scaling,"Skala cetak");
  URI u=new URI(uri);if(!"ipp".equals(u.getScheme())||u.getHost()==null)throw new IOException("Alamat IPP tidak valid");
  URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL();
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
