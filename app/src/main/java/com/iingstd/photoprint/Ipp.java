@@ -71,7 +71,8 @@ final class Ipp {
  }}finally{source.delete();}
  }
  static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling)throws IOException{photoPdf(input,target,media,margin,scaling,false);}
- static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape)throws IOException{
+ static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape)throws IOException{photoPdf(input,target,media,margin,scaling,landscape,0);}
+ static void photoPdf(InputStream input,java.io.File target,String media,int margin,String scaling,boolean landscape,int rotation)throws IOException{
  java.io.File source=java.io.File.createTempFile("photo-source-",".jpg",cacheDirectory);
  android.graphics.Bitmap bitmap;
  try{try(OutputStream out=new FileOutputStream(source)){byte[] buffer=new byte[16384];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);}
@@ -79,6 +80,7 @@ final class Ipp {
  else{android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeFile(source.getPath(),options);if(options.outWidth<=0||options.outHeight<=0)throw new IOException("Foto tidak valid");int sample=1;while(Math.max(options.outWidth,options.outHeight)/(double)sample>4200||((double)options.outWidth*options.outHeight)/(sample*(double)sample)>12000000)sample*=2;options.inJustDecodeBounds=false;options.inSampleSize=sample;bitmap=android.graphics.BitmapFactory.decodeFile(source.getPath(),options);}
  }finally{source.delete();}
  if(bitmap==null)throw new IOException("Foto tidak dapat dibaca");
+ if(rotation!=0){android.graphics.Matrix rotate=new android.graphics.Matrix();rotate.setRotate(rotation);android.graphics.Bitmap rotated=android.graphics.Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),rotate,true);if(rotated!=bitmap)bitmap.recycle();bitmap=rotated;}
  int w=595,h=842;if(media.equals("custom_10rmini_210x252mm"))h=714;else if(media.equals("custom_f4_210x330mm"))h=935;else if(media.equals("na_legal_8.5x14in")){w=612;h=1008;}else if(media.equals("na_index-4x6_4x6in")){w=288;h=432;}
  if(landscape){int swap=w;w=h;h=swap;}
  float m=(margin<0?5:margin)*72f/25.4f;float aw=w-2*m,ah=h-2*m;float s="fill".equals(scaling)?Math.max(aw/bitmap.getWidth(),ah/bitmap.getHeight()):Math.min(aw/bitmap.getWidth(),ah/bitmap.getHeight());float bw=bitmap.getWidth()*s,bh=bitmap.getHeight()*s;
@@ -110,6 +112,10 @@ final class Ipp {
  static void integer(DataOutputStream d,int tag,String name,int value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(4);d.writeInt(value);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
+ static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation)throws Exception{
+ String report=query(uri);File pdf=File.createTempFile("layout-",".pdf",cacheDirectory);File raster=null;
+ try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,copies,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
+ }
  static String printOriented(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int first,int last,boolean landscape)throws Exception{
  if(!landscape)return printInternal(uri,mime,document,media,quality,color,type,copies,-1,"",first,last,3);
  String report=query(uri);File raster=File.createTempFile("landscape-",".ras",cacheDirectory);File pdf=null;
