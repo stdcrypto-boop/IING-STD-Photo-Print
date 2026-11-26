@@ -79,3 +79,5 @@ Added settings reset, read-only live IPP diagnostics with explicit maintenance l
 Set candidate version 0.2/versionCode 2 and added RELEASE_CHECKLIST.md for build, signing, upgrade, physical printer, layout and offline acceptance. Candidate not released; debug signing continuity and actual maintenance protocol unresolved. No latest CI verification.
 
 Added activity-local print submission guard across document/photo and collage paths, reset on completion, and collage copy count validation 1–99. Does not prevent duplicates across activity recreation or printer-side retries. Build pending.
+
+Added seven IPP hardening items: accepting-jobs and queue count diagnostics, rangeOfInteger decoding, local copies bounds, advertised copies range validation, local page range validation, final native page-range capability check, and advertised per-side margin validation. Missing capability attributes remain permissive. CI status unavailable; physical tests pending.
