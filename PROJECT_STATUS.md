@@ -83,3 +83,5 @@ Added activity-local print submission guard across document/photo and collage pa
 Added seven IPP hardening items: accepting-jobs and queue count diagnostics, rangeOfInteger decoding, local copies bounds, advertised copies range validation, local page range validation, final native page-range capability check, and advertised per-side margin validation. Missing capability attributes remain permissive. CI status unavailable; physical tests pending.
 
 Hardened IPP address parsing (scheme/host, userinfo, fragment, query, port), HTTP response MIME validation, query response version validation, and accepted-with-warning print status handling to reduce duplicate retries. CI combined status empty; latest build and device tests pending.
+
+Added transport regression fixtures exercising production URI and HTTP response validators: IPv4, IPv6, hostname, invalid scheme/host, credentials/query/fragment, port bounds, HTTP errors and MIME types. Fixtures not executed here; CI combined status empty. Prioritize obtaining verified APK for physical test rather than additional feature churn.
