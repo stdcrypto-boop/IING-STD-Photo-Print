@@ -2,6 +2,13 @@ package com.iingstd.photoprint;
 import java.io.*;import java.net.*;import java.nio.charset.StandardCharsets;
 final class Ipp {
  static java.io.File cacheDirectory;
+ static android.net.ConnectivityManager connectivity;
+ static HttpURLConnection printerConnection(URL url)throws IOException{
+ if(connectivity==null)throw new IOException("Jaringan belum siap");
+ for(android.net.Network network:connectivity.getAllNetworks()){android.net.NetworkCapabilities caps=connectivity.getNetworkCapabilities(network);if(caps!=null&&caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI))return (HttpURLConnection)network.openConnection(url,Proxy.NO_PROXY);}
+ throw new IOException("Sambungkan HP ke Wi-Fi printer terlebih dahulu");
+ }
+
  static URI printerUri(String address)throws IOException{
  try{URI u=new URI(address);if(!"ipp".equals(u.getScheme())||u.getHost()==null||u.getUserInfo()!=null||u.getFragment()!=null||u.getQuery()!=null||u.getPort()==0||u.getPort()>65535)throw new IOException("Alamat IPP tidak valid");return u;}catch(URISyntaxException e){throw new IOException("Alamat IPP tidak valid",e);}
  }
@@ -67,7 +74,7 @@ final class Ipp {
  }
  static void attr(DataOutputStream d,int tag,String name,String value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8),v=value.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(v.length);d.write(v);}
  static String probe(String uri)throws Exception {return query(uri);}
- static String query(String uri)throws Exception {URI u=printerUri(uri);URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL(); ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);d.writeShort(0x0101);d.writeShort(0x000b);d.writeInt(1);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x44,"requested-attributes","all");d.writeByte(3);HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(10000);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/ipp");try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());}checkResponse(c);try(DataInputStream in=new DataInputStream(c.getInputStream())){int version=in.readUnsignedShort();if(version!=0x0100&&version!=0x0101&&version!=0x0200&&version!=0x0201&&version!=0x0202)throw new IOException("Versi respons IPP tidak valid");int status=in.readUnsignedShort();if(in.readInt()!=1)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status));return "Printer merespons IPP.\n"+readCapabilities(in);}}finally{c.disconnect();}}
+ static String query(String uri)throws Exception {URI u=printerUri(uri);URL url=new URI("http",null,u.getHost(),u.getPort()<0?631:u.getPort(),u.getPath().isEmpty()?"/ipp/print":u.getPath(),null,null).toURL(); ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);d.writeShort(0x0101);d.writeShort(0x000b);d.writeInt(1);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x44,"requested-attributes","all");d.writeByte(3);HttpURLConnection c=printerConnection(url);try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(10000);c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/ipp");try(OutputStream out=c.getOutputStream()){out.write(bytes.toByteArray());}checkResponse(c);try(DataInputStream in=new DataInputStream(c.getInputStream())){int version=in.readUnsignedShort();if(version!=0x0100&&version!=0x0101&&version!=0x0200&&version!=0x0201&&version!=0x0202)throw new IOException("Versi respons IPP tidak valid");int status=in.readUnsignedShort();if(in.readInt()!=1)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status));return "Printer merespons IPP.\n"+readCapabilities(in);}}finally{c.disconnect();}}
  static String readCapabilities(DataInputStream in)throws IOException{
  java.util.Map<String,java.util.List<String>> values=new java.util.LinkedHashMap<>();
  String name="";int depth=0;
@@ -138,7 +145,7 @@ final class Ipp {
  File spool=File.createTempFile("ipp-job-",".bin",cacheDirectory);
  try{
  try(OutputStream out=new FileOutputStream(spool)){out.write(bytes.toByteArray());byte[] buf=new byte[65536];int n;while((n=document.read(buf))!=-1){if(n>0)out.write(buf,0,n);}}
- HttpURLConnection c=(HttpURLConnection)url.openConnection();try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(120000);c.setRequestMethod("POST");c.setDoOutput(true);c.setFixedLengthStreamingMode(spool.length());c.setRequestProperty("Content-Type","application/ipp");
+ HttpURLConnection c=printerConnection(url);try{c.setInstanceFollowRedirects(false);c.setConnectTimeout(5000);c.setReadTimeout(120000);c.setRequestMethod("POST");c.setDoOutput(true);c.setFixedLengthStreamingMode(spool.length());c.setRequestProperty("Content-Type","application/ipp");
  try(InputStream payload=new FileInputStream(spool);OutputStream out=c.getOutputStream()){byte[] buf=new byte[65536];int n;while((n=payload.read(buf))!=-1)out.write(buf,0,n);}
  checkResponse(c);
  try(DataInputStream in=new DataInputStream(c.getInputStream())){in.readUnsignedShort();int status=in.readUnsignedShort();if(in.readInt()!=2)throw new IOException("Request ID salah");if(status>=0x100)throw new IOException("IPP status "+Integer.toHexString(status)+"; periksa printer sebelum mencoba lagi");return status==0?"Job diterima printer. Periksa hasil fisik.":"Job diterima dengan peringatan IPP "+Integer.toHexString(status)+". Periksa hasil; jangan langsung cetak ulang.";}
