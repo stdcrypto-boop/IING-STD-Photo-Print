@@ -71,3 +71,5 @@ Added adjacent collage reorder controls, swapping URI and associated rotation/cr
 Optimized collage preview with 150ms debounce, single background executor, cancellation of stale tasks, interruption checks between images and executor shutdown on dialog dismissal. Existing generation guard retained. No measured performance or build verification; prior combined status empty. Next UI polish and persistent printer settings.
 
 Main screen UI polish: teal palette, density-aware spacing, grouped connection/settings/print sections, rounded ripple action buttons and discovery moved beside connection test. Visual/device and CI verification pending. Next persist settings.
+
+Persisted six print setting selections locally with bounds checking. User screenshot confirms builds 83–86 green; new build pending. Copies and page range intentionally reset to avoid accidental repeated jobs. Next maintenance capability and update flow.
