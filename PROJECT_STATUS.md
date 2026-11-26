@@ -75,3 +75,5 @@ Main screen UI polish: teal palette, density-aware spacing, grouped connection/s
 Persisted six print setting selections locally with bounds checking. User screenshot confirms builds 83–86 green; new build pending. Copies and page range intentionally reset to avoid accidental repeated jobs. Next maintenance capability and update flow.
 
 Added settings reset, read-only live IPP diagnostics with explicit maintenance limitations, release page navigation and installed version label. Release navigation is not an in-app updater; no release or signing continuity verified. Build pending.
+
+Set candidate version 0.2/versionCode 2 and added RELEASE_CHECKLIST.md for build, signing, upgrade, physical printer, layout and offline acceptance. Candidate not released; debug signing continuity and actual maintenance protocol unresolved. No latest CI verification.
