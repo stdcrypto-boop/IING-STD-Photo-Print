@@ -72,3 +72,23 @@ with tempfile.TemporaryDirectory() as d:
  p=pathlib.Path(d)/"LayoutFixture.java"
  p.write_text(harness)
  subprocess.run(["java",str(p)],check=True)
+
+methods=source[source.index(" static int[] cropBounds("):source.index(" static android.graphics.Bitmap editBitmap(")]
+harness="""class CropFixture {
+"""+methods+"""
+public static void main(String[] args){
+for(int w:new int[]{1,2,99,100,1920})for(int h:new int[]{1,2,101,100,1080})for(int crop=0;crop<=6;crop++)for(int x:new int[]{0,50,100})for(int y:new int[]{0,50,100}){
+int[] b=cropBounds(w,h,crop,x,y);
+if(b[0]<0||b[1]<0||b[2]<1||b[3]<1||b[0]+b[2]>w||b[1]+b[3]>h)throw new AssertionError("crop bounds");
+if(x==0&&b[0]!=0||y==0&&b[1]!=0||x==100&&b[0]+b[2]!=w||y==100&&b[1]+b[3]!=h)throw new AssertionError("anchor");
+if(crop==0&&(b[2]!=w||b[3]!=h))throw new AssertionError("original");
+if(crop!=0){double ratio=new double[]{0,1,2.0/3,0.75,2.0/3,4.0/3,1.5}[crop];if(b[2]!=w&&b[3]!=h||Math.abs(b[2]-b[3]*ratio)>Math.max(1,ratio))throw new AssertionError("aspect");}
+}
+System.out.println("Crop fixtures passed");
+}
+}
+"""
+with tempfile.TemporaryDirectory() as d:
+ p=pathlib.Path(d)/"CropFixture.java"
+ p.write_text(harness)
+ subprocess.run(["java",str(p)],check=True)
