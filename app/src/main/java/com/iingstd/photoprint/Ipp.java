@@ -55,7 +55,7 @@ final class Ipp {
  if(!java.util.Arrays.asList(types.split(", ")).contains(gray?"sgray_8":"srgb_8"))throw new IOException("Tipe warna PWG Raster tidak didukung");
  String resolutions=capability(report,"pwg-raster-document-resolution-supported");
  int dpi=0;for(int candidate:new int[]{300,200,150})if(java.util.Arrays.asList(resolutions.split(", ")).contains(candidate+"x"+candidate+" dpi")){dpi=candidate;break;}if(dpi==0)throw new IOException("Tidak ada resolusi PWG Raster yang didukung aplikasi (150/200/300 dpi)");
- int mmw=21000,mmh=29700;if(media.equals("custom_f4_210x330mm"))mmh=33000;else if(media.equals("na_legal_8.5x14in")){mmw=21590;mmh=35560;}else if(media.equals("na_index-4x6_4x6in")){mmw=10160;mmh=15240;}
+ int mmw=21000,mmh=29700;if(media.equals("custom_10rmini_210x252mm"))mmh=25200;else if(media.equals("custom_f4_210x330mm"))mmh=33000;else if(media.equals("na_legal_8.5x14in")){mmw=21590;mmh=35560;}else if(media.equals("na_index-4x6_4x6in")){mmw=10160;mmh=15240;}
  int w=(int)Math.round(mmw*dpi/2540.0),h=(int)Math.round(mmh*dpi/2540.0);
  File source=File.createTempFile("raster-source-",".pdf",cacheDirectory);
  try{try(OutputStream out=new FileOutputStream(source)){byte[] b=new byte[65536];int n;while((n=input.read(b))!=-1)out.write(b,0,n);}
@@ -77,7 +77,7 @@ final class Ipp {
  else{android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeFile(source.getPath(),options);if(options.outWidth<=0||options.outHeight<=0)throw new IOException("Foto tidak valid");int sample=1;while(Math.max(options.outWidth,options.outHeight)/(double)sample>4200||((double)options.outWidth*options.outHeight)/(sample*(double)sample)>12000000)sample*=2;options.inJustDecodeBounds=false;options.inSampleSize=sample;bitmap=android.graphics.BitmapFactory.decodeFile(source.getPath(),options);}
  }finally{source.delete();}
  if(bitmap==null)throw new IOException("Foto tidak dapat dibaca");
- int w=595,h=842;if(media.equals("custom_f4_210x330mm"))h=935;else if(media.equals("na_legal_8.5x14in")){w=612;h=1008;}else if(media.equals("na_index-4x6_4x6in")){w=288;h=432;}
+ int w=595,h=842;if(media.equals("custom_10rmini_210x252mm"))h=714;else if(media.equals("custom_f4_210x330mm"))h=935;else if(media.equals("na_legal_8.5x14in")){w=612;h=1008;}else if(media.equals("na_index-4x6_4x6in")){w=288;h=432;}
  float m=(margin<0?5:margin)*72f/25.4f;float aw=w-2*m,ah=h-2*m;float s="fill".equals(scaling)?Math.max(aw/bitmap.getWidth(),ah/bitmap.getHeight()):Math.min(aw/bitmap.getWidth(),ah/bitmap.getHeight());float bw=bitmap.getWidth()*s,bh=bitmap.getHeight()*s;
  android.graphics.pdf.PdfDocument pdf=new android.graphics.pdf.PdfDocument();try{android.graphics.pdf.PdfDocument.Page page=pdf.startPage(new android.graphics.pdf.PdfDocument.PageInfo.Builder(w,h,1).create());android.graphics.Canvas canvas=page.getCanvas();canvas.drawColor(android.graphics.Color.WHITE);canvas.save();canvas.clipRect(m,m,w-m,h-m);canvas.drawBitmap(bitmap,null,new android.graphics.RectF((w-bw)/2,(h-bh)/2,(w+bw)/2,(h+bh)/2),new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));canvas.restore();pdf.finishPage(page);try(OutputStream out=new FileOutputStream(target)){pdf.writeTo(out);}}finally{try{pdf.close();}finally{bitmap.recycle();}}
  }
@@ -149,8 +149,8 @@ final class Ipp {
  d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort("ipp-attribute-fidelity".length());d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
  d.writeByte(2);
  if(orientation!=0){requireSupported(capabilities,"orientation-requested-supported",String.valueOf(orientation),"Orientasi");integer(d,0x23,"orientation-requested",orientation);}
- if(media.equals("custom_f4_210x330mm")||margin>=0){
- int w=21000,h=29700;if(media.equals("custom_f4_210x330mm"))h=33000;else if(media.equals("na_legal_8.5x14in")){w=21590;h=35560;}else if(media.equals("na_index-4x6_4x6in")){w=10160;h=15240;}
+ if(media.equals("custom_10rmini_210x252mm")||media.equals("custom_f4_210x330mm")||margin>=0){
+ int w=21000,h=29700;if(media.equals("custom_10rmini_210x252mm"))h=25200;else if(media.equals("custom_f4_210x330mm"))h=33000;else if(media.equals("na_legal_8.5x14in")){w=21590;h=35560;}else if(media.equals("na_index-4x6_4x6in")){w=10160;h=15240;}
  attr(d,0x34,"media-col","");attr(d,0x4a,"","media-size");attr(d,0x34,"","");
  attr(d,0x4a,"","x-dimension");integer(d,0x21,"",w);
  attr(d,0x4a,"","y-dimension");integer(d,0x21,"",h);
