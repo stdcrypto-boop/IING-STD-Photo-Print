@@ -50,7 +50,8 @@ final class Ipp {
  return header.array();
  }
  static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize)throws Exception{rasterPdf(input,target,report,media,first,last,color,actualSize,false);}
- static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape)throws Exception{
+ static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape)throws Exception{rasterPdf(input,target,report,media,first,last,color,actualSize,landscape,1);}
+ static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape,int copies)throws Exception{
  String types=capability(report,"pwg-raster-document-type-supported");
  boolean gray="monochrome".equals(color);int channels=gray?1:3;
  if(!java.util.Arrays.asList(types.split(", ")).contains(gray?"sgray_8":"srgb_8"))throw new IOException("Tipe warna PWG Raster tidak didukung");
@@ -63,8 +64,8 @@ final class Ipp {
  try(android.graphics.pdf.PdfRenderer renderer=new android.graphics.pdf.PdfRenderer(android.os.ParcelFileDescriptor.open(source,android.os.ParcelFileDescriptor.MODE_READ_ONLY));DataOutputStream out=new DataOutputStream(new BufferedOutputStream(new FileOutputStream(target)))){
  int begin=first>0?first-1:0,end=last>0?last:renderer.getPageCount();if(begin>=end||end>renderer.getPageCount())throw new IOException("Rentang PDF tidak valid");
  out.writeBytes("RaS2");
- for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
- out.write(rasterHeader(w,h,dpi,mmw,mmh,gray,end-begin));
+ for(int copy=0;copy<copies;copy++)for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
+ out.write(rasterHeader(w,h,dpi,mmw,mmh,gray,Math.multiplyExact(end-begin,copies)));
  android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(w,h,android.graphics.Bitmap.Config.ARGB_8888);
  try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=actualSize?dpi/72f:Math.min((float)w/page.getWidth(),(float)h/page.getHeight());if(actualSize&&(Math.abs(page.getWidth()*scale-w)>dpi/72f+1||Math.abs(page.getHeight()*scale-h)>dpi/72f+1))throw new IOException("Ukuran PDF tidak sama dengan kertas; skala asli ditolak");android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);if(!actualSize)matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);if(landscape){float s=Math.min((float)h/page.getWidth(),(float)w/page.getHeight());matrix.reset();matrix.setScale(s,s);matrix.postRotate(90);matrix.postTranslate((w+page.getHeight()*s)/2,(h-page.getWidth()*s)/2);}page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);writeRasterRow(out,row,gray);}}finally{bitmap.recycle();}
  }}
@@ -114,13 +115,14 @@ final class Ipp {
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
  static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation)throws Exception{
  String report=query(uri);File pdf=File.createTempFile("layout-",".pdf",cacheDirectory);File raster=null;
- try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,copies,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
+ try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape,copies);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
  }
  static String printOriented(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int first,int last,boolean landscape)throws Exception{
- if(!landscape)return printInternal(uri,mime,document,media,quality,color,type,copies,-1,"",first,last,3);
+ if(copies>1&&"image/jpeg".equals(mime))return printPhotoLayout(uri,document,media,quality,color,type,copies,landscape,"fit",0);
+ if(!landscape&&!(copies>1&&"application/pdf".equals(mime)))return printInternal(uri,mime,document,media,quality,color,type,copies,-1,"",first,last,3);
  String report=query(uri);File raster=File.createTempFile("landscape-",".ras",cacheDirectory);File pdf=null;
- try{if("image/jpeg".equals(mime)){pdf=File.createTempFile("landscape-",".pdf",cacheDirectory);photoPdf(document,pdf,media,-1,"",true);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,true);}}else if("application/pdf".equals(mime)){rasterPdf(document,raster,report,media,first,last,color,false,true);}else throw new IOException("Format landscape tidak didukung");
- try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,copies,-1,"none",0,0,3);}
+ try{if("image/jpeg".equals(mime)){pdf=File.createTempFile("landscape-",".pdf",cacheDirectory);photoPdf(document,pdf,media,-1,"",true);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,true);}}else if("application/pdf".equals(mime)){rasterPdf(document,raster,report,media,first,last,color,false,landscape,copies);}else throw new IOException("Format landscape tidak didukung");
+ try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}
  }finally{raster.delete();if(pdf!=null)pdf.delete();}
  }
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last)throws Exception{
