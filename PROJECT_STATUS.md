@@ -57,3 +57,5 @@ Added experimental actual-size PDF-to-PWG raster conversion using dpi/72 transfo
 Added JPEG-to-PWG raster fallback via bounded photo PDF intermediate, preserving fit/fill with default margin, actual-size raster transform, strict no-scaling submission and temporary file cleanup. Native JPEG/PDF preferred. Explicit margin and JPEG original-size not supported on this fallback. Prior combined status empty; CI and physical printer verification pending. Next capability validation and collage.
 
 Added preflight checks for explicitly advertised color mode, media type, print quality and final print scaling. Missing attributes do not cause rejection; strict IPP fidelity remains. Scaling validated after format conversion so software fit/fill remains possible. Previous combined status empty; new build and physical test unverified. Next capability fixtures and collage.
+
+Added CI capability fixtures using production capability and requireSupported methods: supported options, explicit rejection, exact token matching, missing attributes and diagnostic content. Previous combined status empty; fixtures and APK build not executed in this session. Next multi-image collage.
