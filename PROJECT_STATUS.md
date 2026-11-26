@@ -67,3 +67,5 @@ Added scrollable collage dialog with live 900px full-sheet preview, shared physi
 Added per-photo selector, independent 90-degree rotation and horizontal/vertical crop anchors in collage. Preview and print use immutable snapshots of edit arrays; slider refresh on release. Fixed aspect crop only; reordering pending. Prior combined status empty; CI and device tests unverified.
 
 Added adjacent collage reorder controls, swapping URI and associated rotation/crop anchors together. Preview and print workers snapshot URI order and edits to avoid concurrent reorder mismatch. Prior combined status empty; CI and physical tests unverified. Next improve UI and preview performance.
+
+Optimized collage preview with 150ms debounce, single background executor, cancellation of stale tasks, interruption checks between images and executor shutdown on dialog dismissal. Existing generation guard retained. No measured performance or build verification; prior combined status empty. Next UI polish and persistent printer settings.
