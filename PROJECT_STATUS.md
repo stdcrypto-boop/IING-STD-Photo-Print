@@ -63,3 +63,5 @@ Added CI capability fixtures using production capability and requireSupported me
 Implemented separate multi-JPEG collage picker (1–20 images), shared passport dimensions and gap/overflow checks, center crop, bounded 1200px decoding, actual-size PDF generation and IPP submission. One sheet copy, no visual collage preview or per-photo editing yet; next add preview before printing. Previous combined status empty; build and physical tests unverified.
 
 Added scrollable collage dialog with live 900px full-sheet preview, shared physical cell geometry and center crop, bounded thumbnail decoding off UI thread, stale-result guard and disabled print until valid preview. Per-photo editing still pending. Prior combined status empty; build and device tests unverified.
+
+Added per-photo selector, independent 90-degree rotation and horizontal/vertical crop anchors in collage. Preview and print use immutable snapshots of edit arrays; slider refresh on release. Fixed aspect crop only; reordering pending. Prior combined status empty; CI and device tests unverified.
