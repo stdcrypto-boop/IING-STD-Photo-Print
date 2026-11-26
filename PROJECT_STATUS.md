@@ -65,3 +65,5 @@ Implemented separate multi-JPEG collage picker (1–20 images), shared passport 
 Added scrollable collage dialog with live 900px full-sheet preview, shared physical cell geometry and center crop, bounded thumbnail decoding off UI thread, stale-result guard and disabled print until valid preview. Per-photo editing still pending. Prior combined status empty; build and device tests unverified.
 
 Added per-photo selector, independent 90-degree rotation and horizontal/vertical crop anchors in collage. Preview and print use immutable snapshots of edit arrays; slider refresh on release. Fixed aspect crop only; reordering pending. Prior combined status empty; CI and device tests unverified.
+
+Added adjacent collage reorder controls, swapping URI and associated rotation/crop anchors together. Preview and print workers snapshot URI order and edits to avoid concurrent reorder mismatch. Prior combined status empty; CI and physical tests unverified. Next improve UI and preview performance.
