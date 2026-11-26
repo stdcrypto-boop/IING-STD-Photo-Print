@@ -83,7 +83,7 @@ final class Ipp {
  int nl=in.readUnsignedShort();byte[] nb=new byte[nl];in.readFully(nb);if(nl>0)name=new String(nb,StandardCharsets.UTF_8);
  int vl=in.readUnsignedShort();byte[] v=new byte[vl];in.readFully(v);
  if(tag==0x34){depth++;continue;}if(tag==0x37){depth=Math.max(0,depth-1);continue;}if(depth>0)continue;
- if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","printer-state","printer-state-reasons","printer-is-accepting-jobs","queued-job-count","copies-supported","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported","pwg-raster-document-type-supported","pwg-raster-document-resolution-supported","printer-resolution-supported","printer-resolution-default").contains(name))continue;
+ if(!java.util.Arrays.asList("printer-name","printer-make-and-model","document-format-supported","media-supported","media-type-supported","print-color-mode-supported","print-quality-supported","orientation-requested-supported","printer-state","printer-state-reasons","printer-is-accepting-jobs","queued-job-count","copies-supported","operations-supported","page-ranges-supported","print-scaling-supported","media-col-supported","media-top-margin-supported","media-bottom-margin-supported","media-left-margin-supported","media-right-margin-supported","pwg-raster-document-type-supported","pwg-raster-document-resolution-supported","printer-resolution-supported","printer-resolution-default").contains(name))continue;
  String val;
  if((tag==0x21||tag==0x23)&&vl==4){int n=java.nio.ByteBuffer.wrap(v).getInt();val=name.equals("print-quality-supported")?(n==3?"Draft":n==4?"Normal":n==5?"High":String.valueOf(n)):String.valueOf(n);}
  else if(tag==0x32&&vl==9){java.nio.ByteBuffer resolution=java.nio.ByteBuffer.wrap(v);int x=resolution.getInt(),y=resolution.getInt(),unit=resolution.get()&255;val=x+"x"+y+(unit==3?" dpi":unit==4?" dpcm":" (unknown unit)");}
@@ -116,18 +116,18 @@ final class Ipp {
  String formats=null;for(String line:capabilities.split("\\n")){if(line.startsWith("document-format-supported: "))formats=line.substring("document-format-supported: ".length());}if(formats!=null&&!java.util.Arrays.asList(formats.split(", ")).contains(mime)){
  if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("application/pdf")&&!"none".equals(scaling)&&cacheDirectory!=null){
  java.io.File temp=java.io.File.createTempFile("photo-print-",".pdf",cacheDirectory);
- try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return print(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
+ try{photoPdf(document,temp,media,margin,scaling);try(InputStream pdf=new FileInputStream(temp)){return printInternal(uri,"application/pdf",pdf,media,quality,color,type,copies,margin,"",0,0,orientation)+" (JPEG dikonversi ke PDF)";}}finally{temp.delete();}
  }
  if("image/jpeg".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("image/pwg-raster")&&cacheDirectory!=null&&margin<0&&!"none".equals(scaling)){
  File pdfTemp=File.createTempFile("photo-raster-",".pdf",cacheDirectory);
  try{photoPdf(document,pdfTemp,media,margin,scaling);File rasterTemp=File.createTempFile("photo-raster-",".ras",cacheDirectory);
  try{try(InputStream pdf=new FileInputStream(pdfTemp)){rasterPdf(pdf,rasterTemp,capabilities,media,0,0,color,true);}
- try(InputStream raster=new FileInputStream(rasterTemp)){return print(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none",0,0)+" (JPEG ke PWG Raster)";}
+ try(InputStream raster=new FileInputStream(rasterTemp)){return printInternal(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none",0,0,orientation)+" (JPEG ke PWG Raster)";}
  }finally{rasterTemp.delete();}
  }finally{pdfTemp.delete();}
  }
  if("application/pdf".equals(mime)&&java.util.Arrays.asList(formats.split(", ")).contains("image/pwg-raster")&&cacheDirectory!=null&&margin<0&&(scaling.isEmpty()||"fit".equals(scaling)||"none".equals(scaling))){
- File temp=File.createTempFile("pwg-print-",".ras",cacheDirectory);try{rasterPdf(document,temp,capabilities,media,first,last,color,"none".equals(scaling));try(InputStream raster=new FileInputStream(temp)){return print(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none".equals(scaling)?"none":"",0,0)+" (PDF ke PWG Raster)";}}finally{temp.delete();}
+ File temp=File.createTempFile("pwg-print-",".ras",cacheDirectory);try{rasterPdf(document,temp,capabilities,media,first,last,color,"none".equals(scaling));try(InputStream raster=new FileInputStream(temp)){return printInternal(uri,"image/pwg-raster",raster,media,quality,color,type,copies,margin,"none".equals(scaling)?"none":"",0,0,orientation)+" (PDF ke PWG Raster)";}}finally{temp.delete();}
  }
  throw new IOException("Printer tidak mendukung format "+mime+". Format tersedia: "+formats);
  }
@@ -139,7 +139,7 @@ final class Ipp {
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
  d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort("ipp-attribute-fidelity".length());d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
  d.writeByte(2);
- if(orientation!=0)integer(d,0x23,"orientation-requested",orientation);
+ if(orientation!=0){requireSupported(capabilities,"orientation-requested-supported",String.valueOf(orientation),"Orientasi");integer(d,0x23,"orientation-requested",orientation);}
  if(media.equals("custom_f4_210x330mm")||margin>=0){
  int w=21000,h=29700;if(media.equals("custom_f4_210x330mm"))h=33000;else if(media.equals("na_legal_8.5x14in")){w=21590;h=35560;}else if(media.equals("na_index-4x6_4x6in")){w=10160;h=15240;}
  attr(d,0x34,"media-col","");attr(d,0x4a,"","media-size");attr(d,0x34,"","");
