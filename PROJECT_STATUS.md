@@ -89,3 +89,5 @@ Added transport regression fixtures exercising production URI and HTTP response 
 CI now checks candidate APK exists and is nonempty, validates ZIP integrity and publishes SHA256 alongside APK. These checks do not verify signing continuity or runtime functionality. Await latest successful run before physical test; run listing unavailable through current connector.
 
 Extended CI candidate gate with APK signature verification, certificate report, package metadata, package identity check, portable SHA256 manifest and artifact missing-file failure. Latest CI execution unverified; signature verification does not establish continuity with prior installed APK. Await successful build for physical testing.
+
+User physical test build 105 green but printer connection failed: cellular source 10.115.150.233 to Wi-Fi Direct 192.168.223.1 timeout, non-IPP response, invalid discovered URI. Explicit Wi-Fi Network.openConnection with no proxy now used for probe and print; initialized ConnectivityManager in Activity. Endpoint and MIME issue still unresolved; retest required. No claim printing works.
