@@ -28,14 +28,19 @@ public class MainActivity extends Activity {
  android.graphics.Bitmap original=android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(getContentResolver(),file),(decoder,header,source)->{int w=header.getSize().getWidth(),h=header.getSize().getHeight();double scale=Math.min(1.0,Math.min(4200.0/Math.max(w,h),Math.sqrt(12000000.0/((double)w*h))));decoder.setTargetSize(Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)));decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);});
  android.graphics.Bitmap edited=null;try{edited=editBitmap(original,rotation,crop,anchorX,anchorY);ByteArrayOutputStream bytes=new ByteArrayOutputStream();if(!edited.compress(android.graphics.Bitmap.CompressFormat.JPEG,95,bytes))throw new IOException("Edit foto gagal");return new ByteArrayInputStream(bytes.toByteArray());}finally{if(edited!=null&&edited!=original)edited.recycle();original.recycle();}
  }
+ static int[] cropBounds(int w,int h,int crop,int anchorX,int anchorY){
+ if(crop==0)return new int[]{0,0,w,h};
+ float ratio=new float[]{0,1f,2f/3,3f/4,4f/6,4f/3,3f/2}[crop];
+ int cw=w,ch=h;
+ if(w/(float)h>ratio)cw=Math.max(1,Math.round(h*ratio));else ch=Math.max(1,Math.round(w/ratio));
+ return new int[]{Math.round((w-cw)*anchorX/100f),Math.round((h-ch)*anchorY/100f),cw,ch};
+ }
  static android.graphics.Bitmap editBitmap(android.graphics.Bitmap original,int rotation,int crop,int anchorX,int anchorY){
  android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.postRotate(rotation);
  android.graphics.Bitmap rotated=rotation==0?original:android.graphics.Bitmap.createBitmap(original,0,0,original.getWidth(),original.getHeight(),matrix,true);
  if(crop==0)return rotated;
- float ratio=new float[]{0,1f,2f/3,3f/4,4f/6,4f/3,3f/2}[crop];
- int w=rotated.getWidth(),h=rotated.getHeight(),cw=w,ch=h;
- if(w/(float)h>ratio)cw=Math.max(1,Math.round(h*ratio));else ch=Math.max(1,Math.round(w/ratio));
- android.graphics.Bitmap result=android.graphics.Bitmap.createBitmap(rotated,Math.round((w-cw)*anchorX/100f),Math.round((h-ch)*anchorY/100f),cw,ch);
+ int[] bounds=cropBounds(rotated.getWidth(),rotated.getHeight(),crop,anchorX,anchorY);
+ android.graphics.Bitmap result=android.graphics.Bitmap.createBitmap(rotated,bounds[0],bounds[1],bounds[2],bounds[3]);
  if(rotated!=original&&rotated!=result)rotated.recycle();return result;
  }
  android.view.View preview(android.net.Uri file,String mime,int first,int last,int[] rotation,String media,int margin){
