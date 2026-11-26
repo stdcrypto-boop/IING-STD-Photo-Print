@@ -98,7 +98,13 @@ final class Ipp {
  static void integer(DataOutputStream d,int tag,String name,int value)throws IOException{byte[] n=name.getBytes(StandardCharsets.UTF_8);d.writeByte(tag);d.writeShort(n.length);d.write(n);d.writeShort(4);d.writeInt(value);}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,-1,"");}
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling)throws Exception{return print(uri,mime,document,media,quality,color,type,copies,margin,scaling,0,0);}
+ static String printOriented(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int first,int last,boolean landscape)throws Exception{
+ return printInternal(uri,mime,document,media,quality,color,type,copies,-1,"",first,last,landscape?4:3);
+ }
  static String print(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last)throws Exception{
+ return printInternal(uri,mime,document,media,quality,color,type,copies,margin,scaling,first,last,0);
+ }
+ static String printInternal(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int margin,String scaling,int first,int last,int orientation)throws Exception{
  if(copies<1||copies>99)throw new IOException("Jumlah salinan harus 1–99");
  if(first<0||last<first||(first==0&&last!=0))throw new IOException("Rentang halaman tidak valid");
  String capabilities=query(uri);
@@ -133,6 +139,7 @@ final class Ipp {
  ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream d=new DataOutputStream(bytes);
  d.writeShort(0x0101);d.writeShort(2);d.writeInt(2);d.writeByte(1);attr(d,0x47,"attributes-charset","utf-8");attr(d,0x48,"attributes-natural-language","en");attr(d,0x45,"printer-uri",uri);attr(d,0x49,"document-format",mime);d.writeByte(0x22);d.writeShort("ipp-attribute-fidelity".length());d.writeBytes("ipp-attribute-fidelity");d.writeShort(1);d.writeByte(1);
  d.writeByte(2);
+ if(orientation!=0)integer(d,0x23,"orientation-requested",orientation);
  if(media.equals("custom_f4_210x330mm")||margin>=0){
  int w=21000,h=29700;if(media.equals("custom_f4_210x330mm"))h=33000;else if(media.equals("na_legal_8.5x14in")){w=21590;h=35560;}else if(media.equals("na_index-4x6_4x6in")){w=10160;h=15240;}
  attr(d,0x34,"media-col","");attr(d,0x4a,"","media-size");attr(d,0x34,"","");
