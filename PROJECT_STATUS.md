@@ -51,3 +51,5 @@ Corrected compile-time parameter mismatch introduced by crop anchor change: pass
 Added CI regression fixtures extracting actual passport layout methods, checking 240 combinations of paper, size, gap and margin, physical dimensions, spacing and overflow rejection. Fixtures not executed in this session; CI and hardware unverified. Crop geometry tests still pending.
 
 Extracted production cropBounds and added 1575 CI fixture combinations covering tiny, portrait, landscape, square images, all ratios and anchors. Bitmap rotation itself not tested by JVM fixtures. Combined status for previous commit checked; no physical test or CI success claimed. Next collage or printer compatibility.
+
+Added experimental actual-size PDF-to-PWG raster conversion using dpi/72 transform, top-left origin and paper dimension guard allowing only PDF point rounding tolerance. Default printer margins required; forwards strict print-scaling=none, so unsupported printers may reject. Prior combined status empty; CI and physical size unverified. Next verify raster and printer capabilities.
