@@ -49,3 +49,5 @@ Added horizontal and vertical crop anchor sliders (0–100%, centered default) s
 Corrected compile-time parameter mismatch introduced by crop anchor change: passportCells remains five arguments; passportInput accepts both crop anchors and forwards them to photoInput. Reviewed call sites. Combined CI status returned no checks; build and physical tests remain unverified. Next add regression coverage for layout/crop geometry before further features.
 
 Added CI regression fixtures extracting actual passport layout methods, checking 240 combinations of paper, size, gap and margin, physical dimensions, spacing and overflow rejection. Fixtures not executed in this session; CI and hardware unverified. Crop geometry tests still pending.
+
+Extracted production cropBounds and added 1575 CI fixture combinations covering tiny, portrait, landscape, square images, all ratios and anchors. Bitmap rotation itself not tested by JVM fixtures. Combined status for previous commit checked; no physical test or CI success claimed. Next collage or printer compatibility.
