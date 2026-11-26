@@ -135,21 +135,24 @@ public class MainActivity extends Activity {
  try(InputStream in=new FileInputStream(temp)){message=Ipp.print(address,"application/pdf",in,media,qual,col,typ,collageCopies,mar,"none",0,0);}
  }catch(Exception e){message="Gagal kolase: "+e.getMessage();}finally{if(temp!=null)temp.delete();}String result=message;runOnUiThread(()->finishPrint(result));}).start();});
  }
- void discover(EditText uri, TextView status){
+ void discover(EditText uri, TextView status){discoverType(uri,status,false);}
+ void discoverType(EditText uri,TextView status,boolean secure){
  if(listener!=null)return;
  nsd=(android.net.nsd.NsdManager)getSystemService(NSD_SERVICE);
+ final String scheme=secure?"ipps":"ipp";
  listener=new android.net.nsd.NsdManager.DiscoveryListener(){
- public void onDiscoveryStarted(String t){runOnUiThread(()->status.setText("Mencari printer IPP..."));}
+ public void onDiscoveryStarted(String t){runOnUiThread(()->status.setText("Mencari "+scheme+"..."));}
  public void onDiscoveryStopped(String t){}
- public void onStartDiscoveryFailed(String t,int e){runOnUiThread(()->{listener=null;status.setText("Pencarian gagal: "+e);});}
+ public void onStartDiscoveryFailed(String t,int e){runOnUiThread(()->{stopDiscovery();if(!secure)discoverType(uri,status,true);else status.setText("Pencarian gagal: "+e);});}
  public void onStopDiscoveryFailed(String t,int e){}
  public void onServiceLost(android.net.nsd.NsdServiceInfo s){}
- public void onServiceFound(android.net.nsd.NsdServiceInfo s){runOnUiThread(()->{if(resolving||listener==null)return;resolving=true;nsd.resolveService(s,new android.net.nsd.NsdManager.ResolveListener(){
- public void onResolveFailed(android.net.nsd.NsdServiceInfo i,int e){runOnUiThread(()->{resolving=false;status.setText("Resolusi printer gagal: "+e);});}
- public void onServiceResolved(android.net.nsd.NsdServiceInfo i){runOnUiThread(()->{resolving=false;if(listener==null||i.getHost()==null)return;try{byte[] rp=i.getAttributes().get("rp");String path=rp==null?"ipp/print":new String(rp,java.nio.charset.StandardCharsets.UTF_8);if(!path.startsWith("/"))path="/"+path;String address=new URI("ipp",null,i.getHost().getHostAddress(),i.getPort(),path,null,null).toString();uri.setText(address);status.setText("Ditemukan: "+i.getServiceName()+" — tekan Uji koneksi");stopDiscovery();}catch(Exception e){status.setText(e.toString());}});}
+ public void onServiceFound(android.net.nsd.NsdServiceInfo s){runOnUiThread(()->{if(resolving||listener!=this)return;resolving=true;nsd.resolveService(s,new android.net.nsd.NsdManager.ResolveListener(){
+ public void onResolveFailed(android.net.nsd.NsdServiceInfo i,int e){runOnUiThread(()->{resolving=false;status.setText("Resolusi gagal: "+e);});}
+ public void onServiceResolved(android.net.nsd.NsdServiceInfo i){runOnUiThread(()->{resolving=false;if(listener==null||i.getHost()==null)return;try{byte[] rp=i.getAttributes().get("rp");if(rp==null||rp.length==0){status.setText("Layanan tanpa jalur rp");return;}String path=new String(rp,java.nio.charset.StandardCharsets.UTF_8);if(!path.startsWith("/"))path="/"+path;String address=new URI(scheme,null,i.getHost().getHostAddress(),i.getPort(),path,null,null).toString();uri.setText(address);stopDiscovery();status.setText("Menguji "+address);new Thread(()->{try{String report=Ipp.probe(address);runOnUiThread(()->{getPreferences(0).edit().putString("uri",address).apply();status.setText(report);});}catch(Exception e){runOnUiThread(()->{status.setText(address+" : "+e.getMessage());if(!secure)discoverType(uri,status,true);});}}).start();}catch(Exception e){status.setText(e.toString());}});}
  });});}
  };
- try{nsd.discoverServices("_ipp._tcp.",android.net.nsd.NsdManager.PROTOCOL_DNS_SD,listener);new Handler(Looper.getMainLooper()).postDelayed(()->{if(listener!=null){stopDiscovery();status.setText("Pencarian selesai. Masukkan IP manual jika belum ditemukan.");}},15000);}catch(Exception e){listener=null;status.setText(e.toString());}
+ final android.net.nsd.NsdManager.DiscoveryListener current=listener;
+ try{nsd.discoverServices("_"+scheme+"._tcp.",android.net.nsd.NsdManager.PROTOCOL_DNS_SD,current);new Handler(Looper.getMainLooper()).postDelayed(()->{if(listener==current){stopDiscovery();if(!secure)discoverType(uri,status,true);else status.setText("IPP/IPPS belum ditemukan. Uji alamat manual.");}},15000);}catch(Exception e){listener=null;status.setText(e.toString());}
  }
  void stopDiscovery(){if(listener!=null){try{nsd.stopServiceDiscovery(listener);}catch(Exception ignored){}listener=null;}}
  @Override protected void onDestroy(){stopDiscovery();super.onDestroy();}
