@@ -73,3 +73,5 @@ Optimized collage preview with 150ms debounce, single background executor, cance
 Main screen UI polish: teal palette, density-aware spacing, grouped connection/settings/print sections, rounded ripple action buttons and discovery moved beside connection test. Visual/device and CI verification pending. Next persist settings.
 
 Persisted six print setting selections locally with bounds checking. User screenshot confirms builds 83–86 green; new build pending. Copies and page range intentionally reset to avoid accidental repeated jobs. Next maintenance capability and update flow.
+
+Added settings reset, read-only live IPP diagnostics with explicit maintenance limitations, release page navigation and installed version label. Release navigation is not an in-app updater; no release or signing continuity verified. Build pending.
