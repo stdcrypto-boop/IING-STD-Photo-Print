@@ -81,3 +81,5 @@ Set candidate version 0.2/versionCode 2 and added RELEASE_CHECKLIST.md for build
 Added activity-local print submission guard across document/photo and collage paths, reset on completion, and collage copy count validation 1–99. Does not prevent duplicates across activity recreation or printer-side retries. Build pending.
 
 Added seven IPP hardening items: accepting-jobs and queue count diagnostics, rangeOfInteger decoding, local copies bounds, advertised copies range validation, local page range validation, final native page-range capability check, and advertised per-side margin validation. Missing capability attributes remain permissive. CI status unavailable; physical tests pending.
+
+Hardened IPP address parsing (scheme/host, userinfo, fragment, query, port), HTTP response MIME validation, query response version validation, and accepted-with-warning print status handling to reduce duplicate retries. CI combined status empty; latest build and device tests pending.
