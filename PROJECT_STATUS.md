@@ -69,3 +69,5 @@ Added per-photo selector, independent 90-degree rotation and horizontal/vertical
 Added adjacent collage reorder controls, swapping URI and associated rotation/crop anchors together. Preview and print workers snapshot URI order and edits to avoid concurrent reorder mismatch. Prior combined status empty; CI and physical tests unverified. Next improve UI and preview performance.
 
 Optimized collage preview with 150ms debounce, single background executor, cancellation of stale tasks, interruption checks between images and executor shutdown on dialog dismissal. Existing generation guard retained. No measured performance or build verification; prior combined status empty. Next UI polish and persistent printer settings.
+
+Main screen UI polish: teal palette, density-aware spacing, grouped connection/settings/print sections, rounded ripple action buttons and discovery moved beside connection test. Visual/device and CI verification pending. Next persist settings.
