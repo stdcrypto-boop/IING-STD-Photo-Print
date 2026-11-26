@@ -51,7 +51,8 @@ final class Ipp {
  }
  static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize)throws Exception{rasterPdf(input,target,report,media,first,last,color,actualSize,false);}
  static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape)throws Exception{rasterPdf(input,target,report,media,first,last,color,actualSize,landscape,1);}
- static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape,int copies)throws Exception{
+ static void rasterPdf(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape,int copies)throws Exception{rasterPdfSelected(input,target,report,media,first,last,color,actualSize,landscape,copies,null);}
+ static void rasterPdfSelected(InputStream input,File target,String report,String media,int first,int last,String color,boolean actualSize,boolean landscape,int copies,String selection)throws Exception{
  String types=capability(report,"pwg-raster-document-type-supported");
  boolean gray="monochrome".equals(color);int channels=gray?1:3;
  if(!java.util.Arrays.asList(types.split(", ")).contains(gray?"sgray_8":"srgb_8"))throw new IOException("Tipe warna PWG Raster tidak didukung");
@@ -63,9 +64,10 @@ final class Ipp {
  try{try(OutputStream out=new FileOutputStream(source)){byte[] b=new byte[65536];int n;while((n=input.read(b))!=-1)out.write(b,0,n);}
  try(android.graphics.pdf.PdfRenderer renderer=new android.graphics.pdf.PdfRenderer(android.os.ParcelFileDescriptor.open(source,android.os.ParcelFileDescriptor.MODE_READ_ONLY));DataOutputStream out=new DataOutputStream(new BufferedOutputStream(new FileOutputStream(target)))){
  int begin=first>0?first-1:0,end=last>0?last:renderer.getPageCount();if(begin>=end||end>renderer.getPageCount())throw new IOException("Rentang PDF tidak valid");
+ int[] selected=parsePages(selection==null?(first==0?"":first+"-"+last):selection,renderer.getPageCount());
  out.writeBytes("RaS2");
- for(int copy=0;copy<copies;copy++)for(int i=begin;i<end;i++){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(i)){
- out.write(rasterHeader(w,h,dpi,mmw,mmh,gray,Math.multiplyExact(end-begin,copies)));
+ for(int copy=0;copy<copies;copy++)for(int number:selected){try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(number-1)){
+ out.write(rasterHeader(w,h,dpi,mmw,mmh,gray,Math.multiplyExact(selected.length,copies)));
  android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(w,h,android.graphics.Bitmap.Config.ARGB_8888);
  try{bitmap.eraseColor(android.graphics.Color.WHITE);float scale=actualSize?dpi/72f:Math.min((float)w/page.getWidth(),(float)h/page.getHeight());if(actualSize&&(Math.abs(page.getWidth()*scale-w)>dpi/72f+1||Math.abs(page.getHeight()*scale-h)>dpi/72f+1))throw new IOException("Ukuran PDF tidak sama dengan kertas; skala asli ditolak");android.graphics.Matrix matrix=new android.graphics.Matrix();matrix.setScale(scale,scale);if(!actualSize)matrix.postTranslate((w-page.getWidth()*scale)/2,(h-page.getHeight()*scale)/2);if(landscape){float s=Math.min((float)h/page.getWidth(),(float)w/page.getHeight());matrix.reset();matrix.setScale(s,s);matrix.postRotate(90);matrix.postTranslate((w+page.getHeight()*s)/2,(h-page.getWidth()*s)/2);}page.render(bitmap,null,matrix,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT);int[] row=new int[w];for(int y=0;y<h;y++){bitmap.getPixels(row,0,w,0,y,w,1);writeRasterRow(out,row,gray);}}finally{bitmap.recycle();}
  }}
@@ -118,6 +120,14 @@ final class Ipp {
  static String printPhotoLayout(String uri,InputStream document,String media,int quality,String color,String type,int copies,boolean landscape,String scaling,int rotation,float widthMm,float heightMm)throws Exception{
  if(copies<1||copies>99)throw new IOException("Jumlah salinan harus 1–99");String report=query(uri);File pdf=File.createTempFile("layout-",".pdf",cacheDirectory);File raster=null;
  try{photoPdf(document,pdf,media,-1,scaling,landscape,rotation,widthMm,heightMm);raster=File.createTempFile("layout-",".ras",cacheDirectory);try(InputStream in=new FileInputStream(pdf)){rasterPdf(in,raster,report,media,0,0,color,false,landscape,copies);}try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}}finally{pdf.delete();if(raster!=null)raster.delete();}
+ }
+ static int[] parsePages(String selection,int total)throws IOException{
+ if(total<1)throw new IOException("PDF kosong");String s=selection==null?"":selection.trim().replace('–','-').replace('—','-');java.util.LinkedHashSet<Integer> list=new java.util.LinkedHashSet<>();
+ if(s.isEmpty()){for(int i=1;i<=total;i++)list.add(i);}else for(String part:s.split(",",-1)){String[] a=part.trim().split("-",-1);try{if(a.length>2)throw new NumberFormatException();int lo=Integer.parseInt(a[0].trim()),hi=a.length==2?Integer.parseInt(a[1].trim()):lo;if(lo<1||hi<lo||hi>total)throw new NumberFormatException();for(int i=lo;i<=hi;i++)list.add(i);}catch(NumberFormatException e){throw new IOException("Halaman tidak valid: "+part);}}
+ int[] result=new int[list.size()];int i=0;for(int page:list)result[i++]=page;return result;
+ }
+ static String printSelected(String uri,InputStream document,String media,int quality,String color,String type,int copies,String selection,boolean landscape)throws Exception{
+ if(copies<1||copies>99)throw new IOException("Jumlah salinan tidak valid");String report=query(uri);File raster=File.createTempFile("selected-",".ras",cacheDirectory);try{rasterPdfSelected(document,raster,report,media,0,0,color,false,landscape,copies,selection);try(InputStream in=new FileInputStream(raster)){return printInternal(uri,"image/pwg-raster",in,media,quality,color,type,1,-1,"none",0,0,3);}}finally{raster.delete();}
  }
  static String printOriented(String uri,String mime,InputStream document,String media,int quality,String color,String type,int copies,int first,int last,boolean landscape)throws Exception{
  if(copies>1&&"image/jpeg".equals(mime))return printPhotoLayout(uri,document,media,quality,color,type,copies,landscape,"fit",0);
