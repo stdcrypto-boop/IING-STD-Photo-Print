@@ -5,7 +5,16 @@ final class Ipp {
  static android.net.ConnectivityManager connectivity;
  static HttpURLConnection printerConnection(URL url)throws IOException{
  if(connectivity==null)throw new IOException("Jaringan belum siap");
- for(android.net.Network network:connectivity.getAllNetworks()){android.net.NetworkCapabilities caps=connectivity.getNetworkCapabilities(network);if(caps!=null&&caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI))return (HttpURLConnection)network.openConnection(url,Proxy.NO_PROXY);}
+ android.net.Network fallback=null;
+ for(android.net.Network network:connectivity.getAllNetworks()){
+ android.net.NetworkCapabilities caps=connectivity.getNetworkCapabilities(network);
+ if(caps==null||!caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI))continue;
+ if(fallback==null)fallback=network;
+ android.net.LinkProperties links=connectivity.getLinkProperties(network);
+ if(links==null)continue;
+ try{java.net.InetAddress target=network.getByName(url.getHost());for(android.net.RouteInfo route:links.getRoutes()){if(!route.isDefaultRoute()&&route.matches(target))return (HttpURLConnection)network.openConnection(url,Proxy.NO_PROXY);}}catch(java.net.UnknownHostException ignored){}
+ }
+ if(fallback!=null)return (HttpURLConnection)fallback.openConnection(url,Proxy.NO_PROXY);
  throw new IOException("Sambungkan HP ke Wi-Fi printer terlebih dahulu");
  }
 
